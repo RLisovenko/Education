@@ -1,7 +1,6 @@
+### DataEngineering
 Performed by: R. Lisovenko
 Created: 02-10-2026
-### DataEngineering
-
 Educational materials, exercises, and practical tasks in data engineering, including SQL, PostgreSQL, data pipelines, data quality, ETL, batch processing, and streaming concepts.
 
 ### DataScience
