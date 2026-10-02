@@ -30,4 +30,10 @@ Educational materials and practical exercises in Git, GitHub, CI/CD, containers,
 
 ### Certificates
 
+- 🔗 [Certificates](https://github.com/RLisovenko/Education/tree/main/Certificates)
+- 📄 [Databases, SQL, Data Science & Python](https://github.com/RLisovenko/Education/blob/main/Certificates/Databases_SQL_DataScience_Python.pdf)
+- 📄 [DevOps Introduction](https://github.com/RLisovenko/Education/blob/main/Certificates/DevOps_Introduction.pdf)
+- 📄 [Python Data Science AI Development](https://github.com/RLisovenko/Education/blob/main/Certificates/PythonDataScience_AI_Development.pdf)
+- 📄 [Python Data Science](https://github.com/RLisovenko/Education/blob/main/Certificates/Python_Data_Science.pdf)
+
 Certificates and records of completed courses, specializations, and professional learning programs.
