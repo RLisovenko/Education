@@ -13,6 +13,16 @@ This directory contains the practical work for the Agile Planning laboratory as 
 
 `Education/4_DevOps/4_2_Agile-Development-and-Scrum/labs/lab-agile-planning`
 
+## Kanban Structure
+
+    New Issues
+    → Icebox
+    → Product Backlog
+    → Sprint Backlog
+    → In Progress
+    → Review/QA
+    → Done
+
 ## Other Courses
 
 ### Data Science
