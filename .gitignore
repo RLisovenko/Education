@@ -1,0 +1,20 @@
+# Python
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+Thumbs.db
+.DS_Store

@@ -1,0 +1,6 @@
+print('Hallo welt')
+#print("Hallo die Freund")
+sName=input("Input deine vorName:")
+print("hallo", '', sName,"!")
+print(f"Hallo , {sName}!")
+print("hallo", '', "!",sName,sep="")
