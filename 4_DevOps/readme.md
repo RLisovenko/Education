@@ -25,7 +25,7 @@ Learning materials, notes, and practical exercises in DevOps.
 Each course or topic has its own folder for notes, supporting documents,
 and practical exercises. Sections are populated as learning progresses.
 
-## Others course
+## Other course
 ### DataScience
 
 - 🔗 [Data Science](https://github.com/RLisovenko/Python/tree/Python/edu/DataScience)
