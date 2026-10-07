@@ -226,3 +226,18 @@ git push -u origin edu/DataEng-Fund-SQL-Python
 
 пуш с заменить содержимое удалённой ветки локальной версией
 git push -u origin edu/DataEng-Fund-SQL-Python --force-with-lease
+
+------------------------------
+pandas — работа с табличными данными, CSV, DataFrame.
+pyarrow — поддержка формата Parquet и Apache Arrow.
+
+1. pip install pandas pyarrow
+python -m pip show pandas pyarrow
+
+pd.read_csv(...)
+pd.read_parquet(...)
+df.to_parquet(...)
+
+2.	mkdir data\csv
+	mkdir data\json
+	mkdir data\parquet

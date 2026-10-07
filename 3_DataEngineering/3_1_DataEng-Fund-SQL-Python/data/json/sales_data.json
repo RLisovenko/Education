@@ -1,0 +1,52 @@
+[
+  {
+    "order_id":1001,
+    "customer_name":"Alice Johnson",
+    "product":"Laptop",
+    "category":"Electronics",
+    "quantity":1,
+    "unit_price":75000,
+    "city":"Bengaluru",
+    "order_date":"2026-08-01T00:00:00.000"
+  },
+  {
+    "order_id":1002,
+    "customer_name":"Rahul Sharma",
+    "product":"Mouse",
+    "category":"Accessories",
+    "quantity":2,
+    "unit_price":800,
+    "city":"Mumbai",
+    "order_date":"2026-08-02T00:00:00.000"
+  },
+  {
+    "order_id":1003,
+    "customer_name":"Priya Nair",
+    "product":"Keyboard",
+    "category":"Accessories",
+    "quantity":1,
+    "unit_price":1500,
+    "city":"Chennai",
+    "order_date":"2026-08-02T00:00:00.000"
+  },
+  {
+    "order_id":1004,
+    "customer_name":"John Thomas",
+    "product":"Monitor",
+    "category":"Electronics",
+    "quantity":2,
+    "unit_price":18000,
+    "city":"Hyderabad",
+    "order_date":"2026-08-03T00:00:00.000"
+  },
+  {
+    "order_id":1005,
+    "customer_name":"Sneha Patel",
+    "product":"Webcam",
+    "category":"Accessories",
+    "quantity":3,
+    "unit_price":2500,
+    "city":"Pune",
+    "order_date":"2026-08-04T00:00:00.000"
+  }
+]

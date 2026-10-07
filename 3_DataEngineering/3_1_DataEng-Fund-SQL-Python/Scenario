@@ -1,2 +1,38 @@
 Imagine you've just joined a data engineering team and have been assigned to organise a new project. The project contains datasets, Python scripts, SQL files, and other resources that will continue to grow over time.
 Instead of manually managing these files through File Explorer, data engineers use the command line to quickly navigate directories, organise project files, and perform routine file management tasks efficiently.
+--------------
+### Install lib Pandas 
+pandas — работа с табличными данными, CSV, DataFrame.
+pyarrow — поддержка формата Parquet и Apache Arrow.
+pip install pandas pyarrow
+
+pd.read_csv(...)
+pd.read_parquet(...)
+df.to_parquet(...)
+
+### Create separate folders for CSV, JSON, and Parquet data files.
+mkdir data\csv
+mkdir data\json
+mkdir data\parquet
+
+<Project>/
+├─ data/
+└─ scripts/
+   ├─ ps/
+   ├─ py/
+   │  └─ create_sample_data.py
+   └─ sql/
+
+inspect file
+--------------
+Retail company
+     ↓
+CSV + JSON/API + Parquet
+     ↓
+inspect formats
+     ↓
+understand structure
+     ↓
+compare characteristics
+     ↓
+choose suitable format

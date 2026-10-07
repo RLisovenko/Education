@@ -1,0 +1,6 @@
+order_id,customer_name,product,category,quantity,unit_price,city,order_date
+1001,Alice Johnson,Laptop,Electronics,1,75000,Bengaluru,2026-08-01
+1002,Rahul Sharma,Mouse,Accessories,2,800,Mumbai,2026-08-02
+1003,Priya Nair,Keyboard,Accessories,1,1500,Chennai,2026-08-02
+1004,John Thomas,Monitor,Electronics,2,18000,Hyderabad,2026-08-03
+1005,Sneha Patel,Webcam,Accessories,3,2500,Pune,2026-08-04
