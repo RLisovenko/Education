@@ -20,3 +20,20 @@ __pycache__/
 *.log
 Thumbs.db
 .DS_Store
+
+# Microsoft Office temporary files
+~$*.docx
+~$*.xlsx
+~$*.pptx
+*.tmp
+
+# Windows temporary/system files
+Thumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+
+# Lock files
+*.lock
