@@ -1,10 +1,11 @@
 # Data Engineering Course
 
-Practical exercises and notes for the Coursera course **Data Engineering Foundations with SQL and reporting system**.
+Practical exercises and notes for the Coursera course **Data Engineering Foundations with SQL and Python**, including data formats, PostgreSQL, SQL, relational databases, and reporting-oriented data workflows.
 
 ## Executor
-    - LiR
-    - Created: 12-10-2026
+
+- Performed by: R. Lisovenko
+- Created: 12-10-2026
 
 ## Project Structure
 
@@ -15,7 +16,9 @@ Practical exercises and notes for the Coursera course **Data Engineering Foundat
 - `scripts/ps/` — PowerShell scripts
 - `scripts/py/` — Python scripts
 - `scripts/sql/` — SQL scripts
-DataEng/
+
+```text
+02_Relational-Database/
 ├─ data/
 ├─ docs/
 ├─ notebooks/
@@ -24,44 +27,55 @@ DataEng/
 │  ├─ ps/
 │  ├─ py/
 │  └─ sql/
+│     └─ retail_db_setup.sql
+├─ .gitignore
 ├─ requirements.txt
-└─ README.md
+├─ README.md
+└─ Scenario
+```
 
-## WorkSpace
-    - Python Version : 3.14.6
-    - Pandas Version : 3.0.6
-    - Git Version    : git version 2.55.0.windows.5
-    - PostgreSQL     : psql (PostgreSQL) 17.11
+## Workspace
+
+- Python Version: 3.14.6
+- Pandas Version: 3.0.6
+- Git Version: 2.55.0.windows.5
+- PostgreSQL: 17.11
 
 ## PostgreSQL Commands
 
 ### Connect to PostgreSQL
 
-- powershell 
-```
-  psql -U postgres
-  CREATE DATABASE retail_db;
-  \l
-```
-##### — switch retail_db
-
-```
-\с retail_db                
+```powershell
+psql -U postgres
 ```
 
-02_Relational-Database/
-└─ scripts/
-   └─ sql/
-      └─ retail_db_setup.sql
-##### Run SQL-sript in PostgreSQL
-   - psql -U postgres -f scripts\sql\retail_db_setup.sql
+### Create Database
 
-- view tabl and Type columns
+```sql
+CREATE DATABASE retail_db;
 ```
-    \dt
-    \d sales
+
+### List Databases
+
+```text
+\l
 ```
+
+### Connect to `retail_db`
+
+```text
+\c retail_db
 ```
+
+After connecting, the `psql` prompt changes to:
+
+```text
+retail_db=#
+```
+
+### Create the `sales` Table
+
+```sql
 CREATE TABLE sales (
     order_id INTEGER PRIMARY KEY,
     customer_name VARCHAR(100),
@@ -71,11 +85,22 @@ CREATE TABLE sales (
     order_date DATE
 );
 ```
-```
-SELECT * FROM sales;
+
+### View Tables
+
+```text
+\dt
 ```
 
+### View Table Structure and Column Types
+
+```text
+\d sales
 ```
+
+### Insert Sample Data
+
+```sql
 INSERT INTO sales
 (order_id, customer_name, product, quantity, unit_price, order_date)
 VALUES
@@ -84,16 +109,110 @@ VALUES
 (1003, 'Priya Nair', 'Keyboard', 1, 1500.00, '2026-08-02');
 ```
 
+### View All Records
+
+```sql
+SELECT * FROM sales;
+```
+
+### Example Filtered Query
+
+```sql
+SELECT *
+FROM sales
+WHERE unit_price > 1000;
+```
+
+## PostgreSQL SQL Script
+
+The PostgreSQL setup commands are also stored in:
+
+```text
+02_Relational-Database/
+└─ scripts/
+   └─ sql/
+      └─ retail_db_setup.sql
+```
+
+### Run SQL Script in PostgreSQL
+
+From the `02_Relational-Database` project directory:
+
+```powershell
+psql -U postgres -f scripts\sql\retail_db_setup.sql
+```
+
+The script creates the database and table, inserts sample records, and runs basic inspection queries.
+
+## PostgreSQL Authentication Configuration
+
+PostgreSQL client authentication is configured in:
+
+```text
+C:\Program Files\PostgreSQL\17\data\pg_hba.conf
+```
+
+Standard local authentication:
+
+```text
+host    all    all    127.0.0.1/32    scram-sha-256
+host    all    all    ::1/128         scram-sha-256
+```
+
+For temporary local password recovery, authentication can be changed to:
+
+```text
+host    all    all    127.0.0.1/32    trust
+host    all    all    ::1/128         trust
+```
+
+Restart PostgreSQL from Administrator PowerShell:
+
+```powershell
+Restart-Service postgresql-x64-17
+```
+
+Connect locally:
+
+```powershell
+psql -h 127.0.0.1 -U postgres
+```
+
+Set a new password:
+
+```sql
+ALTER USER postgres WITH PASSWORD 'NEW_PASSWORD';
+```
+
+Exit `psql`:
+
+```text
+\q
+```
+
+After changing the password, restore secure authentication:
+
+```text
+host    all    all    127.0.0.1/32    scram-sha-256
+host    all    all    ::1/128         scram-sha-256
+```
+
+Restart PostgreSQL again:
+
+```powershell
+Restart-Service postgresql-x64-17
+```
 
 ## Related Other Completed Courses and Learning
 
-### DataEngineering
- - Performed by: R. Lisovenko
- - Created: 02-10-2026
+### Data Engineering
 
- Educational materials, exercises, and practical tasks in data engineering, including SQL, PostgreSQL, data pipelines, data quality, ETL, batch processing, and streaming concepts.
+- Performed by: R. Lisovenko
+- Created: 02-10-2026
 
-### DataScience
+Educational materials, exercises, and practical tasks in Data Engineering, including SQL, PostgreSQL, data pipelines, data quality, ETL, batch processing, streaming concepts, file formats, and relational databases.
+
+### Data Science
 
 - 🔗 [Data Science](https://github.com/RLisovenko/Python/tree/Python/edu/DataScience)
 - 🔗 [Data Science AI Development](https://github.com/RLisovenko/Python/tree/Python/edu/DataScience-AI-Dev)
@@ -126,4 +245,3 @@ Educational materials and practical exercises in Git, GitHub, CI/CD, containers,
 - 📄 [Python Data Science](https://github.com/RLisovenko/Education/blob/main/Certificates/Python_Data_Science.pdf)
 
 Certificates and records of completed courses, specializations, and professional learning programs.
-
