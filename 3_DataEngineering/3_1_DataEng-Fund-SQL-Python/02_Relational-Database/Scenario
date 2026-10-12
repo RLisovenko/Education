@@ -1,0 +1,12 @@
+Imagine a retail company is preparing a new reporting system for its sales team.
+
+Before dashboards and reports can be built, the engineering team needs a reliable database to store order information in a structured format. The database must support consistent records, clear data types, and easy querying.
+Sales data
+   ↓
+structured relational database
+   ↓
+consistent records + data types
+   ↓
+SQL queries
+   ↓
+reports / dashboards
