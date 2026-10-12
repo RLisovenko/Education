@@ -1,0 +1,21 @@
+# 04_Advanced-SQL-and-Data-Modeling
+
+A retail company stores sales, customer, and product data in PostgreSQL and needs more advanced analysis for reporting and decision-making.
+
+The engineering team must handle missing values and data types correctly, combine information from multiple related tables, calculate business metrics, and create more complex analytical queries.
+
+Using SQL, we can work with NULL values, join tables, calculate metrics, use Common Table Expressions (CTEs), and apply window functions to analyze data efficiently.
+
+This demonstrates how advanced SQL techniques and data modeling help transform relational data into reliable and useful business insights.
+
+- NULL
+- JOIN
+- CTE
+- Window 
+
+![Global Visualization](pic/global_visualization.png)
+
+## Executor
+
+- Performed by: R. Lisovenko
+- Created: 12-10-2026
