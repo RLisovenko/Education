@@ -27,6 +27,13 @@ DataEng/
 ├─ requirements.txt
 └─ README.md
 
+## WorkSpace
+    - Python Version : 3.14.6
+    - Pandas Version : 3.0.6
+    - Git Version    : git version 2.55.0.windows.5
+    - PostgreSQL     : psql (PostgreSQL) 17.11
+    
+
 ## Topics
 
 - Data engineering fundamentals
@@ -36,6 +43,80 @@ DataEng/
 - Data pipelines
 - Incremental loading and idempotency
 - Git and GitHub.
+
+
+### CSV, JSON, AND PARQUET FILE INSPECTION
+
+#### CSV FORMAT
+    - Shape(rows, columns): (5, 8)
+    - Columns:
+    - ['order_id', 'customer_name', 'product', 'category', 'quantity', 'unit_price', 'city', 'order_date']
+
+#### Data Types:
+    - order_id         int64
+    - customer_name      str
+    - product            str    
+    - category           str
+    - quantity         int64
+    - unit_price       int64
+    - city               str
+    - order_date         str
+    - dtype: object
+
+### JSON FORMAT
+
+#### Shape(rows, columns): (5, 8)
+
+##### Columns:
+    - ['order_id', 'customer_name', 'product', 'category', 'quantity', 'unit_price', 'city', 'order_date']
+
+#### Data Types:
+    - order_id         int64
+    - customer_name      str
+    - product            str
+    - category           str
+    - quantity         int64
+    - unit_price       int64
+    - city               str
+    - order_date         str
+    - dtype: object
+
+#### PARQUET FORMAT
+##### Shape(rows, columns): (5, 8)
+##### Columns:
+    - ['order_id', 'customer_name', 'product', 'category', 'quantity', 'unit_price', 'city', 'order_date']
+
+##### Data Types:
+    - order_id                  int64
+    - customer_name               str
+    - product                     str
+    - category                    str
+    - quantity                  int64
+    - unit_price                int64
+    - city                        str
+    - order_date       datetime64[us]
+
+#####  dtype: object
+| order_id | customer_name | product | category | quantity | unit_price | city | order_date |
+|---:|---|---|---|---:|---:|---|---|
+| 1001 | Alice Johnson | Laptop | Electronics | 1 | 75000 | Bengaluru | 2026-08-01 |
+| 1002 | Rahul Sharma | Mouse | Accessories | 2 | 800 | Mumbai | 2026-08-02 |
+| 1003 | Priya Nair | Keyboard | Accessories | 1 | 1500 | Chennai | 2026-08-02 |
+| 1004 | John Thomas | Monitor | Electronics | 2 | 18000 | Hyderabad | 2026-08-03 |
+| 1005 | Sneha Patel | Webcam | Accessories | 3 | 2500 | Pune | 2026-08-04 |
+- 4      1005    Sneha Patel    Webcam  Accessories         3        2500       Pune 2026-08-04
+
+
+### FOLDER CONTENTS: data
+
+    - data\csv\sales_data.csv
+    - data\json\sales_data.json
+    - data\parquet\sales_data.parquet
+    - data\processed\processed_sales.csv
+    - data\raw\sales_data.csv
+
+##### FORMAT COMPARISION SUMMARY
+
 
 ## Related Other Completed Courses and Learning
 
