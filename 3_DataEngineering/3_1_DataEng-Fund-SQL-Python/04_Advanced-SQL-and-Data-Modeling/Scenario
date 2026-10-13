@@ -15,6 +15,21 @@ This demonstrates how advanced SQL techniques and data modeling help transform r
 
 ![Global Visualization](pic/global_visualization.png)
 
+## Common Table Expressions (CTEs)
+
+CTEs are temporary named query results created with `WITH`. They help structure complex SQL queries into clear and reusable steps.
+
+### Scenario CTE
+
+Imagine a retail business wants deeper insights from its order data.
+
+The team needs to identify high-value customers, rank orders by revenue, track cumulative sales over time, compare totals within each product group, and find the top-performing order for every product.
+
+These tasks require more than basic filtering and aggregation, so we will use CTEs and window functions to solve them efficiently.
+
+![CTE and Window Functions Visualization](pic/cte_window_functions_visualization.png)
+
+
 ## Executor
 
 - Performed by: R. Lisovenko
