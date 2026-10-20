@@ -1,0 +1,19 @@
+
+BUSINESS SCENARIO:
+==================
+
+GlobalMart receives a CSV file every morning from its online sales system.
+
+Before analysts can use the data, the engineering team must:
+
+1. Receive the source file.
+2. Create the destination table.
+3. Load the file into PostgreSQL.
+4. Verify that every record has been imported.
+5. Confirm that there are no duplicate order IDs.
+
+Only after these validation checks is the data considered ready for downstream processing.
+
+- Performed by: R. Lisovenko
+- Created: 19-10-2026
+

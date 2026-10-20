@@ -1,0 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Environment, IDE and temporary files
+env/
+.idea/
+*.tmp
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+Thumbs.db
+.DS_Store

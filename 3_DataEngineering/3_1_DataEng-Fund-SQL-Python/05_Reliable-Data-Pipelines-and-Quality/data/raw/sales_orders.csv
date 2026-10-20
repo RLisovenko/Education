@@ -1,0 +1,11 @@
+order_id,customer_name,product,quantity,unit_price,order_date
+2001,Alice Johnson,Laptop,1,75000.00,2026-08-01
+2002,Rahul Sharma,Mouse,2,800.00,2026-08-02
+2003,Priya Nair,Keyboard,1,1500.00,2026-08-02
+2004,John Thomas,Monitor,2,18000.00,2026-08-03
+2005,Sneha Patel,Webcam,3,2500.00,2026-08-04
+2006,Arjun Mehta,Laptop,1,72000.00,2026-08-05
+2007,Neha Kapoor,Mouse,4,850.00,2026-08-05
+2008,Karan Singh,Keyboard,2,1600.00,2026-08-06
+2009,Riya Das,Monitor,1,17500.00,2026-08-07
+2010,Vikram Rao,Webcam,2,2400.00,2026-08-08
