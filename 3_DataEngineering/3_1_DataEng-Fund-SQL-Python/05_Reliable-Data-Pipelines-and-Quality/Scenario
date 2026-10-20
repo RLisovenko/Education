@@ -1,4 +1,8 @@
 
+Scenario 1 → Loading File Data into PostgreSQL
+Scenario 2 → Validating Data Quality in PostgreSQL
+Scenario 3 → Cleaning and Preparing Data for Analysis
+
 BUSINESS SCENARIO:
 ==================
 
@@ -25,6 +29,14 @@ Here, we will load the dataset into PostgreSQL and perform structured quality ch
 The goal is to identify every issue before the data moves into the cleaning and preparation stage.
 
 Only after these validation checks is the data considered ready for downstream processing.
+
+## Scenario 3: Cleaning and Preparing Data for Analysis
+
+Imagine the GlobalMart data engineering team has completed its quality assessment on a newly received sales dataset.
+
+The validation report identified missing customer names, missing product information, duplicate transactions, invalid quantities, negative prices, and inconsistent text formatting.
+
+Before this data can be used for dashboards, reporting, or business decisions, every issue must be corrected to ensure the dataset is accurate, consistent, and ready for analysis.
 
 - Performed by: R. Lisovenko
 - Created: 19-10-2026

@@ -394,8 +394,277 @@ SELECT
 FROM sales_quality;
 ```
 
+## Scenario 3 → Cleaning and Preparing Data for Analysis
 
-## Project Structure
+## Create Cleaned Sales Table
+
+- Creates the `sales_cleaned` table for storing corrected and standardized sales records.
+- This table will contain data after cleaning missing values, duplicates, invalid quantities, negative prices, and inconsistent formatting.
+
+```sql
+CREATE TABLE sales_cleaned (
+    order_id INTEGER,
+    customer_name VARCHAR(100),
+    product VARCHAR(100),
+    quantity INTEGER,
+    unit_price NUMERIC(10,2),
+    order_date DATE
+);
+```
+
+- Verify the table structure:
+
+```text
+\d sales_cleaned
+```
+
+- Loads the raw cleaning dataset into the `sales_cleaned` table.
+- The file intentionally contains missing values, duplicate rows, invalid numeric values, and inconsistent text formatting for cleaning practice.
+
+```text
+\copy sales_cleaned FROM 'data/raw/sales_orders_cleaning.csv' DELIMITER ',' CSV HEADER;
+```
+
+Expected result:
+
+```text
+COPY 8
+```
+
+- Displays all imported records for review.
+
+```sql
+SELECT *
+FROM sales_cleaned
+ORDER BY order_id;
+```
+```text
+    4002 → missing customer_name
+    4003 → quantity = 0
+    4004 → negative unit_price
+    4005 → missing product
+    4006 → duplicate order
+    4001 / 4007 → inconsistent lowercase names
+```
+- Replaces missing or empty customer names with a standard placeholder value.
+- `UPDATE` modifies only records where `customer_name` is `NULL` or an empty string.
+
+```sql
+UPDATE sales_cleaned
+SET customer_name = 'Unknown Customer'
+WHERE customer_name IS NULL
+   OR customer_name = '';
+```
+
+Expected result:
+
+```text
+UPDATE 1
+```
+
+- Verifies that missing customer names were successfully replaced with the standard value `Unknown Customer`.
+
+```sql
+SELECT *
+FROM sales_cleaned
+WHERE customer_name = 'Unknown Customer';
+```
+
+Expected result:
+
+```text
+1 row
+```
+
+- Replaces missing or empty product values with the standard placeholder `Unknown Product`.
+- The update affects only rows where `product` is `NULL` or an empty string.
+
+```sql
+UPDATE sales_cleaned
+SET product = 'Unknown Product'
+WHERE product IS NULL
+   OR product = '';
+```
+
+Expected result:
+
+```text
+UPDATE 1
+```
+
+```sql
+SELECT *
+FROM sales_cleaned
+WHERE product = 'Unknown Product';
+```
+- Corrects invalid `quantity` values by replacing zero or negative quantities with `1`.
+- The follow-up query verifies that no invalid quantity values remain.
+
+```sql
+UPDATE sales_cleaned
+SET quantity = 1
+WHERE quantity <= 0;
+```
+
+Expected result:
+
+```text
+UPDATE 1
+```
+
+```sql
+SELECT *
+FROM sales_cleaned
+WHERE quantity <= 0;
+```
+
+Expected result:
+
+```text
+0 rows
+```
+
+- Corrects negative `unit_price` values by converting them to positive values with `ABS()`.
+- The follow-up query verifies that no negative prices remain.
+
+```sql
+UPDATE sales_cleaned
+SET unit_price = ABS(unit_price)
+WHERE unit_price < 0;
+```
+
+Expected result:
+
+```text
+UPDATE 1
+```
+
+```sql
+SELECT *
+FROM sales_cleaned
+WHERE unit_price < 0;
+```
+
+Expected result:
+
+```text
+0 rows
+```
+
+- Cleans customer names by removing leading and trailing spaces with `TRIM()`.
+- `INITCAP()` converts each word to title case.
+
+- `TRIM()` — removes leading and trailing spaces from a text value.
+- `INITCAP()` — capitalizes the first letter of each word and converts the remaining letters to lowercase.
+
+```sql
+UPDATE sales_cleaned
+SET customer_name = INITCAP(TRIM(customer_name));
+```
+
+- Verify the cleaned customer names:
+
+```sql
+SELECT
+    order_id,
+    customer_name
+FROM sales_cleaned
+ORDER BY order_id;
+```
+- Removes duplicate records from `sales_cleaned` while keeping one row for each `order_id`.
+- `ctid` is PostgreSQL's internal row identifier.
+- `MIN(ctid)` keeps one physical row from each duplicate group, and the other duplicates are deleted.
+
+```sql
+DELETE FROM sales_cleaned
+WHERE ctid NOT IN (
+    SELECT MIN(ctid)
+    FROM sales_cleaned
+    GROUP BY order_id
+);
+```
+
+Expected result:
+
+```text
+DELETE 1
+```
+
+- Verifies that no duplicate `order_id` values remain.
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS duplicate_count
+FROM sales_cleaned
+GROUP BY order_id
+HAVING COUNT(*) > 1;
+```
+
+Expected result:
+
+```text
+0 rows
+```
+
+## Final Cleaned Dataset
+
+- Displays the cleaned and standardized dataset after all data-quality corrections.
+
+```sql
+SELECT *
+FROM sales_cleaned
+ORDER BY order_id;
+```
+
+- After cleaning, the dataset contains 7 valid records with corrected missing values, numeric values, text formatting, and duplicate removal.
+
+- Performs a final completeness check on the cleaned dataset.
+- `COUNT(*)` counts all records.
+- `NULLIF(column, '')` treats empty strings as `NULL`, so `COUNT(...)` counts only valid non-empty values.
+
+```sql
+SELECT
+    COUNT(*) AS total_records,
+    COUNT(NULLIF(customer_name, '')) AS valid_customer_names,
+    COUNT(NULLIF(product, '')) AS valid_products
+FROM sales_cleaned;
+```
+
+Expected result:
+
+```text
+total_records | valid_customer_names | valid_products
+--------------+----------------------+---------------
+7             | 7                    | 7
+```
+
+- This confirms that all 7 cleaned records now contain valid customer names and product values.
+
+- Performs a final data-quality summary check after cleaning.
+- `CASE WHEN` counts any remaining missing customer names, missing products, invalid quantities, or negative prices.
+- A result of `0` in every column confirms that the detected quality issues were corrected.
+
+```sql
+SELECT
+    SUM(CASE WHEN customer_name IS NULL OR customer_name = '' THEN 1 ELSE 0 END) AS missing_customer_names,
+    SUM(CASE WHEN product IS NULL OR product = '' THEN 1 ELSE 0 END) AS missing_products,
+    SUM(CASE WHEN quantity <= 0 THEN 1 ELSE 0 END) AS invalid_quantities,
+    SUM(CASE WHEN unit_price < 0 THEN 1 ELSE 0 END) AS invalid_prices
+FROM sales_cleaned;
+```
+
+Expected result:
+
+```text
+missing_customer_names | missing_products | invalid_quantities | invalid_prices
+-----------------------+------------------+--------------------+---------------
+0                      | 0                | 0                  | 0
+```
+
+- This confirms that the cleaned dataset passes the main quality checks.
+
+## ---------------------------------Project Structure
 
 - `data/` — source datasets
 - `docs/` — documentation and notes
