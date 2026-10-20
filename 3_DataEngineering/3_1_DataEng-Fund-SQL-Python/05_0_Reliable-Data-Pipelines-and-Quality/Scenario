@@ -3,9 +3,36 @@ Scenario 1 → Loading File Data into PostgreSQL
 Scenario 2 → Validating Data Quality in PostgreSQL
 Scenario 3 → Cleaning and Preparing Data for Analysis
 
-BUSINESS SCENARIO:
+scripts/sql/
+├─ scenario_1_loading_file_data.sql
+├─ scenario_2_data_quality_validation.sql
+├─ scenario_3_cleaning_and_preparation.sql
+└─ scenario_4_structured_workflow.sql
+
+BUSINESS SCENARIO :
 ==================
 
+Scenario 1 → Loading File Data into PostgreSQL
+Scenario 2 → Validating Data Quality in PostgreSQL
+Scenario 3 → Cleaning and Preparing Data for Analysis
+Scenario 4: Building a Structured Data Processing Workflow
+
+## SQL Scenario Scripts
+
+```text
+scripts/sql/
+├─ scenario_1_loading_file_data.sql
+├─ scenario_2_data_quality_validation.sql
+├─ scenario_3_cleaning_and_preparation.sql
+└─ scenario_4_structured_workflow.sql
+```
+
+- `scenario_1_loading_file_data.sql` — loads CSV data into PostgreSQL and performs basic verification.
+- `scenario_2_data_quality_validation.sql` — checks missing values, duplicates, and invalid numeric data.
+- `scenario_3_cleaning_and_preparation.sql` — cleans, standardizes, and validates the dataset.
+- `scenario_4_structured_workflow.sql` — combines loading, validation, cleaning, deduplication, reporting, and export into a complete structured workflow.
+
+## SCENARIO 1 : Loading File Data into PostgreSQL
 GlobalMart receives a CSV file every morning from its online sales system.
 
 Before analysts can use the data, the engineering team must:
@@ -38,6 +65,16 @@ The validation report identified missing customer names, missing product informa
 
 Before this data can be used for dashboards, reporting, or business decisions, every issue must be corrected to ensure the dataset is accurate, consistent, and ready for analysis.
 
+## Scenario 4: Building a Structured Data Processing Workflow
+
+Imagine you have just joined NorthStar Logistics as a junior data engineer.
+
+Every morning, regional hubs submit shipment records that are used by operations teams to monitor deliveries across the network.
+
+Today's incoming file contains valid records, but it also includes missing destination details, incomplete delivery statuses, invalid package weights, inconsistent hub formatting, and a duplicate shipment.
+
+
+### -----------------------
 - Performed by: R. Lisovenko
 - Created: 19-10-2026
 

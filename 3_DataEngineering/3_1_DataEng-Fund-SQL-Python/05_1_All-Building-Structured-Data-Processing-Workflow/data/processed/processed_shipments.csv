@@ -1,0 +1,12 @@
+shipment_id,origin_hub,destination_hub,package_weight,delivery_status,shipment_date
+SH1001,Bengaluru,Mumbai,12.50,Delivered,2026-08-01
+SH1002,Chennai,Unknown Hub,8.00,In Transit,2026-08-01
+SH1003,Hyderabad,Pune,15.20,Delivered,2026-08-02
+SH1004,Delhi,Kolkata,5.00,Pending,2026-08-02
+SH1005,Mumbai,Ahmedabad,10.00,Delivered,2026-08-03
+SH1006,Pune,Delhi,7.50,In Transit,2026-08-04
+SH1007,Bengaluru,Chennai,9.80,Delivered,2026-08-04
+SH1008,Kolkata,Hyderabad,11.30,Pending,2026-08-05
+SH1009,Ahmedabad,Mumbai,6.40,Unknown,2026-08-05
+SH1010,Chennai,Pune,1.00,In Transit,2026-08-06
+SH1011,Delhi,Bengaluru,14.70,Delivered,2026-08-06

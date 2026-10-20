@@ -664,6 +664,23 @@ missing_customer_names | missing_products | invalid_quantities | invalid_prices
 
 - This confirms that the cleaned dataset passes the main quality checks.
 
+## Scenario 4: Building a Structured Data Processing Workflow
+
+'''text
+daily_shipments.csv
+        ↓
+validate
+        ↓
+clean
+        ↓
+standardize
+        ↓
+remove duplicates
+        ↓
+processed / trusted data
+
+```
+
 ## ---------------------------------Project Structure
 
 - `data/` — source datasets
