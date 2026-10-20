@@ -12,6 +12,18 @@ Before analysts can use the data, the engineering team must:
 4. Verify that every record has been imported.
 5. Confirm that there are no duplicate order IDs.
 
+## Scenario 2: Validating Data Quality in PostgreSQL
+
+Imagine GlobalMart has received a new batch of sales transactions from its online ordering platform.
+
+Before the data reaches dashboards and reports, the engineering team must confirm that it can be trusted.
+
+Some records may contain missing customer or product details, duplicate order IDs, or invalid numeric values.
+
+Here, we will load the dataset into PostgreSQL and perform structured quality checks.
+
+The goal is to identify every issue before the data moves into the cleaning and preparation stage.
+
 Only after these validation checks is the data considered ready for downstream processing.
 
 - Performed by: R. Lisovenko
