@@ -1,0 +1,51 @@
+FINAL PROJECT SCENARIO:
+=======================
+
+RetailFlow Commerce is a growing retail company that sells products through both physical stores and online channels.
+
+As the business expands, its operational teams collect data from multiple systems, including customer records, product catalogs, store transactions, online orders, and sales reports.
+
+Most of this information arrives as CSV, JSON, and Parquet files from different departments.
+
+Currently, these files are manually inspected and processed before analysts can use them for reporting.
+
+As data volumes increase, the existing process becomes difficult to manage.
+
+The company faces several challenges:
+
+1. Data arrives in different file formats and structures.
+2. Some datasets contain missing values.
+3. Some records contain inconsistent data types.
+4. Duplicate records may exist.
+5. Invalid numeric values may appear.
+6. Input schemas may change over time.
+7. Business data is distributed across separate files.
+8. Analysts repeatedly perform manual calculations.
+9. Reprocessing source files may create duplicate database records.
+10. Pipeline failures are difficult to diagnose.
+11. Project files and processing scripts require better organization and version control.
+
+RetailFlow wants to build a structured and reliable data engineering workflow using open-source tools.
+
+The new workflow must:
+
+1. Organize raw and processed data.
+2. Inspect CSV, JSON, and Parquet files.
+3. Validate file schemas.
+4. Detect schema drift.
+5. Validate incoming records.
+6. Clean problematic data.
+7. Load trusted structured data into PostgreSQL.
+8. Create a relational data model.
+9. Analyze data using SQL.
+10. Calculate useful business metrics.
+11. Use JOINs, CTEs, and window functions.
+12. Handle NULL values and invalid data safely.
+13. Perform structured data-quality checks.
+14. Prevent unnecessary duplicate processing.
+15. Support idempotent and incremental loading.
+16. Allow safe reprocessing after failures.
+17. Document common pipeline failures and troubleshooting steps.
+18. Perform final end-to-end validation.
+
+The final goal is to transform fragmented raw datasets into a structured, reliable, queryable, and analysis-ready data system.

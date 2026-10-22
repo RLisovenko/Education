@@ -1,0 +1,7 @@
+﻿numpy              # Numerical arrays and calculations
+pandas             # Tables and data processing
+openpyxl           # Excel .xlsx files
+requests           # HTTP requests and APIs
+python-dotenv      # Load settings from .env
+psycopg[binary]     # PostgreSQL connection
+pyodbc             # ODBC connections (requires a database ODBC driver)
