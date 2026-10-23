@@ -1180,6 +1180,118 @@ Defensive SQL is used to make queries more reliable when the database contains i
 
 #### 6.6.1. Identify NULL Values
 
+#### 6.6.2. Handle NULL Values Appropriately in Calculations
+
+#### 6.6.2. Handle NULL Values Appropriately in Calculations
+
+`COALESCE()` is used to replace `NULL` values with a safe default value during calculations.
+
+The following query calculates the total value of order items while treating missing `quantity` or `price` values as `0`.
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    COALESCE(quantity, 0) AS safe_quantity,
+    COALESCE(price, 0) AS safe_price,
+    COALESCE(quantity, 0) * COALESCE(price, 0) AS line_total
+FROM orders_items
+WHERE order_id = 316;
+```
+
+- `COALESCE(quantity, 0)` returns `0` when `quantity` is `NULL`.
+- `COALESCE(price, 0)` returns `0` when `price` is `NULL`.
+- This prevents calculations from returning `NULL` when one of the required values is missing.
+
+#### 6.6.3. Check Whether Values Use Expected Data Types
+
+
+Data types should match the expected structure of the database to avoid incorrect calculations and loading errors.
+
+The following query checks the data types of the `orders_items` columns in PostgreSQL.
+```text
+\d orders_items;
+```
+ or
+```sql
+SELECT
+    column_name,
+    data_type
+FROM information_schema.columns
+WHERE table_name = 'orders_items'
+ORDER BY ordinal_position;
+```
+
+Expected data types:
+
+```text
+id         | integer
+order_id   | integer
+item_id    | integer
+quantity   | integer
+price      | numeric
+```
+
+- `order_id`, `item_id`, and `quantity` should use integer values.
+- `price` should use a numeric data type suitable for calculations.
+- Checking data types helps ensure that SQL operations behave consistently and correctly.
+
+#### 6.6.4. Prevent Incorrect Calculations Caused by Missing or Invalid Data
+
+Calculations should use only valid numeric values to avoid incorrect business results.
+
+The following query calculates line totals only for records with valid positive `quantity` and `price` values.
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    quantity,
+    price,
+    quantity * price AS line_total
+FROM orders_items
+WHERE quantity IS NOT NULL
+  AND price IS NOT NULL
+  AND quantity > 0
+  AND price > 0;
+```
+
+- `quantity IS NOT NULL` and `price IS NOT NULL` exclude incomplete records.
+- `quantity > 0` and `price > 0` exclude invalid numeric values.
+- This prevents incorrect totals caused by missing, zero, or negative values.
+
+#### 6.6.5. Validate Joins to Ensure Records Are Not Unintentionally Duplicated or Excluded
+
+Joins should be checked to ensure that related records are connected correctly and that no rows are accidentally duplicated or lost.
+
+The following query validates the relationship between `orders`, `orders_items`, and `items` for order `316`.
+
+```sql
+SELECT
+    o.order_id,
+    oi.item_id,
+    i.item_name,
+    COUNT(*) AS join_count
+FROM orders o
+JOIN orders_items oi
+    ON o.order_id = oi.order_id
+JOIN items i
+    ON oi.item_id = i.id
+WHERE o.order_id = 316
+GROUP BY
+    o.order_id,
+    oi.item_id,
+    i.item_name
+ORDER BY oi.item_id;
+```
+
+- `COUNT(*)` helps detect unexpected duplicate rows after the joins.
+- Each `(order_id, item_id)` combination should normally appear once.
+- If `join_count > 1`, the join may be producing duplicate records.
+- If expected items are missing, the foreign-key relationships or source data should be checked.
+
+#### 6.6.6. Document Assumptions Made During SQL Analysis
+
 Before calculations or joins are performed, columns should be checked for missing values.
 
 ```sql
@@ -1195,6 +1307,412 @@ WHERE order_id IS NULL
 - Detecting missing values before calculations helps prevent incorrect analytical results.
 - In the final `orders_items` table, important business fields should normally contain valid values.
 
+
+### 6.7. Validate Data Quality
+
+Data quality checks are used to confirm that the processed data is complete, consistent, valid, and suitable for analysis.
+
+#### 6.7.1. Verify Required Fields Are Populated
+
+Required fields in the final `orders_items` table should not contain `NULL` values.
+
+```sql
+SELECT *
+FROM orders_items
+WHERE order_id IS NULL
+   OR item_id IS NULL
+   OR quantity IS NULL
+   OR price IS NULL;
+```
+
+- The query checks whether required fields contain missing values.
+- A result with no rows indicates that all required fields are populated.
+- Records containing missing required values should be investigated before they are used for business analysis.
+
+#### 6.7.2. Verify Primary Identifiers Are Unique
+
+Primary identifiers should be unique so that each record can be identified reliably.
+
+The following query checks whether any duplicate `id` values exist in the final `orders_items` table.
+
+```sql
+SELECT
+    id,
+    COUNT(*) AS duplicate_count
+FROM orders_items
+GROUP BY id
+HAVING COUNT(*) > 1;
+```
+
+- `GROUP BY id` groups records with the same identifier.
+- `COUNT(*)` shows how many times each identifier appears.
+- `HAVING COUNT(*) > 1` returns only duplicated identifiers.
+- An empty result confirms that the primary identifiers are unique.
+
+
+#### 6.7.3. Detect Duplicate Records
+
+Duplicate records should be detected to prevent the same order item from being counted more than once.
+
+The following query checks whether the same `item_id` appears more than once within the same order.
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    COUNT(*) AS duplicate_count
+FROM orders_items
+GROUP BY
+    order_id,
+    item_id
+HAVING COUNT(*) > 1;
+```
+
+- `GROUP BY order_id, item_id` checks duplicates within each individual order.
+- `COUNT(*)` shows how many times the same item appears in the same order.
+- `HAVING COUNT(*) > 1` returns only duplicated order items.
+- An empty result confirms that no duplicate order-item combinations exist.
+
+#### 6.7.4. Validate Numeric Values
+
+Numeric fields should contain values within acceptable business ranges.
+
+The following query checks for invalid quantities or prices in the final `orders_items` table.
+
+```sql
+SELECT *
+FROM orders_items
+WHERE quantity <= 0
+   OR price <= 0;
+```
+
+- `quantity <= 0` identifies invalid item quantities.
+- `price <= 0` identifies invalid or non-positive prices.
+- An empty result confirms that all numeric values are within the expected range.
+
+#### 6.7.5. Validate Dates
+
+Date values should follow the expected format and fall within logical ranges.
+
+The following query checks for missing dates and dates that are later than the current date.
+
+```sql
+SELECT *
+FROM orders
+WHERE order_date IS NULL
+   OR order_date > CURRENT_DATE;
+```
+
+- `order_date IS NULL` identifies missing dates.
+- `order_date > CURRENT_DATE` identifies dates that are unexpectedly in the future.
+- An empty result confirms that order dates are present and logically valid.
+
+#### 6.7.6. Validate Relationships Between Tables
+
+Foreign-key relationships should remain valid so that every order item references an existing order and an existing item.
+
+The following query checks for order items that do not have a matching order.
+
+```sql
+SELECT
+    oi.order_id,
+    oi.item_id
+FROM orders_items oi
+LEFT JOIN orders o
+    ON oi.order_id = o.order_id
+WHERE o.order_id IS NULL;
+```
+
+The following query checks for order items that do not have a matching item.
+
+```sql
+SELECT
+    oi.order_id,
+    oi.item_id
+FROM orders_items oi
+LEFT JOIN items i
+    ON oi.item_id = i.id
+WHERE i.id IS NULL;
+```
+
+- An empty result confirms that all `order_id` values reference valid orders.
+- An empty result confirms that all `item_id` values reference valid items.
+- These checks help verify referential integrity between the related tables.
+
+#### 6.7.7. Validate Loaded Record Counts
+
+Loaded record counts should be checked to confirm that the expected number of records reached the final table.
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS loaded_items
+FROM orders_items
+GROUP BY order_id
+ORDER BY order_id;
+```
+
+For order `316`, the expected result is:
+
+```text
+order_id | loaded_items
+---------+-------------
+316      | 3
+```
+
+- `COUNT(*)` shows how many order-item records were loaded for each order.
+- The result can be compared with the expected number of valid source records.
+- For order `316`, three valid items should be present in the final table.
+
+#### 6.7.8. Validate Calculated Business Metrics
+
+Calculated business metrics should be checked to confirm that totals and sales values are consistent with the underlying order-item data.
+
+```sql
+UPDATE orders_items
+SET
+    quantity = CASE item_id
+        WHEN 1 THEN 1
+        WHEN 2 THEN 2
+        WHEN 3 THEN 1
+        WHEN 4 THEN 2
+    END,
+    price = CASE item_id
+        WHEN 1 THEN 75000.00
+        WHEN 2 THEN 800.00
+        WHEN 3 THEN 1500.00
+        WHEN 4 THEN 18000.00
+    END
+WHERE order_id = 109;
+
+```
+
+```sql
+SELECT
+    order_id,
+    SUM(quantity) AS total_quantity,
+    SUM(quantity * price) AS total_sales
+FROM orders_items
+GROUP BY order_id
+ORDER BY order_id;
+```
+
+Expected results include:
+
+```text
+order_id | total_quantity | total_sales
+---------+----------------+------------
+109      | 4              | ...
+316      | 3              | 91000.00
+```
+
+- `SUM(quantity)` calculates the total quantity of items in each order.
+- `SUM(quantity * price)` calculates the total sales value for each order.
+- The calculated values should match the detailed records stored in `orders_items`.
+- For order `316`, the expected total quantity is `3` and the expected total sales value is `91000.00
+
+### 6.8. Clean and Prepare the Data
+
+#### 6.8.1. Remove or Resolve Duplicate Records
+
+Duplicate records should be identified and removed or isolated before the data is used for downstream analysis.
+
+The following query identifies duplicated order items in the raw staging table:
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    quantity,
+    price,
+    COUNT(*) AS duplicate_count
+FROM orders_items_raw
+GROUP BY
+    order_id,
+    item_id,
+    quantity,
+    price
+HAVING COUNT(*) > 1;
+```
+
+Only one copy of an identical record should be preserved. Additional duplicate rows can be marked using `error_reason` or excluded from the final `orders_items` table.
+
+The final table is additionally protected by:
+
+```sql
+UNIQUE (order_id, item_id)
+```
+
+and:
+
+```sql
+ON CONFLICT (order_id, item_id) DO NOTHING
+```
+
+This prevents duplicate order items from being inserted during repeated processing.
+
+#### 6.8.2. Handle Missing Values
+
+Missing values should be identified and handled before records are used for downstream analysis.
+
+The following query identifies incomplete records in the raw staging table:
+
+```sql
+SELECT *
+FROM orders_items_raw
+WHERE order_id IS NULL
+   OR customer_id IS NULL
+   OR item_id IS NULL
+   OR quantity IS NULL
+   OR price IS NULL
+   OR order_date IS NULL;
+```
+
+Missing values should not be silently replaced when the correct business value is unknown.
+
+For example, a missing `item_id` is marked as invalid:
+
+```sql
+UPDATE orders_items_raw
+SET error_reason = 'Missing item_id'
+WHERE item_id IS NULL;
+```
+
+Invalid or incomplete records remain in the staging layer and are excluded from the final `orders_items` table until they can be safely corrected.
+
+#### 6.8.3. Standardizing Text Values
+
+Text values should be standardized to avoid differences caused by extra spaces or inconsistent capitalization.
+
+The following query standardizes customer names in the `customers` table:
+
+```sql
+UPDATE customers
+SET customer_name = INITCAP(TRIM(customer_name));
+```
+
+- `TRIM()` removes leading and trailing spaces.
+- `INITCAP()` converts each word to a consistent capitalization format.
+- Standardized text values improve matching, grouping, and reporting consistency.
+
+#### 6.8.4. Correcting Inconsistent Data Types
+
+Data types should be consistent before records are used for calculations or loaded into the final tables.
+
+The following query checks the current data types of the raw staging table:
+
+```sql
+SELECT
+    column_name,
+    data_type
+FROM information_schema.columns
+WHERE table_name = 'orders_items_raw'
+ORDER BY ordinal_position;
+```
+
+If incoming values use incorrect types, they should be converted before final loading.
+
+Example:
+
+```sql
+SELECT
+    order_id::INTEGER,
+    item_id::INTEGER,
+    quantity::INTEGER,
+    price::NUMERIC(10,2)
+FROM orders_items_raw;
+```
+
+- `::INTEGER` converts values to integer format.
+- `::NUMERIC(10,2)` converts price values to a numeric format suitable for calculations.
+- Type conversion helps ensure consistent storage and reliable SQL operations.
+
+#### 6.8.5. Validating Numerical Fields
+
+Numerical fields should contain valid positive values before records are used for analysis or loaded into the final tables.
+
+The following query identifies invalid quantities or prices in the raw staging table:
+
+```sql
+SELECT *
+FROM orders_items_raw
+WHERE quantity <= 0
+   OR price <= 0;
+```
+
+Invalid numerical values can be converted to `NULL` and marked for further investigation:
+
+```sql
+UPDATE orders_items_raw
+SET
+    quantity = CASE
+        WHEN quantity <= 0 THEN NULL
+        ELSE quantity
+    END,
+    price = CASE
+        WHEN price <= 0 THEN NULL
+        ELSE price
+    END;
+```
+
+- Quantities must be greater than `0`.
+- Prices must be greater than `0`.
+- Invalid numeric values should not be used in sales calculations.
+- Records containing invalid numerical values should be corrected or excluded before loading into the final table.
+
+#### 6.8.6. Standardizing Date Representations
+
+Date values should use a consistent format before they are stored or analysed.
+
+The `order_date` column is stored as the PostgreSQL `DATE` data type, which standardizes dates in the format `YYYY-MM-DD`.
+
+```sql
+SELECT
+    order_id,
+    order_date
+FROM orders
+ORDER BY order_date;
+```
+
+If incoming text-based dates use different formats, they should be converted before loading into the final table.
+
+Example:
+
+```sql
+
+
+
+```
+
+- PostgreSQL `DATE` provides a consistent date representation.
+- `TO_DATE()` converts text values into valid date values using the specified source format.
+- Standardized dates improve sorting, filtering, and date-based analysis.
+
+#### 6.8.7. Separate Invalid Records That Cannot Be Safely Corrected
+
+Records that cannot be safely corrected should be separated from valid data instead of being loaded into the final table.
+
+The following query returns all records that were marked with a validation error:
+
+```sql
+SELECT *
+FROM orders_items_raw
+WHERE error_reason IS NOT NULL;
+```
+
+These records can be treated as rejected data and excluded from the final load.
+
+```sql
+CREATE TABLE IF NOT EXISTS orders_items_rejected AS
+SELECT *
+FROM orders_items_raw
+WHERE error_reason IS NOT NULL;
+```
+
+- Records with `error_reason IS NOT NULL` are considered invalid or incomplete.
+- Rejected records remain available for investigation instead of being silently deleted.
+- Only records with `error_reason IS NULL` are loaded into the final `orders_items` table.
+- This approach keeps problematic source data traceable and supports safer data cleaning.
 
 ## ---------------Executor
 
