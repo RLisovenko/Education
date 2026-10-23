@@ -13,7 +13,7 @@ Final practical project for the course **Data Engineering Foundations with SQL a
 
 The project demonstrates an end-to-end structured data engineering workflow using CSV, JSON, Parquet, Python, PostgreSQL, SQL, Git, and data-quality engineering practices.
 
-## 6.1. PostgreSQL Database Inspection
+### 6.1. PostgreSQL Database Inspection
 
 - Connect to PostgreSQL:
 
@@ -113,8 +113,8 @@ customers (1)
 ```
 
 
-## 6.3. Create Two Tables in the Database: Products and Order Items Tables
-
+### 6.3. Create Two Tables in the Database: Products and Order Items Tables
+#### Create Table
 
 ```sql
 CREATE TABLE items (
@@ -177,7 +177,7 @@ orders_items
 - `item_name NOT NULL` — every product must have a name.
 
 
-### Backward Compatibility with Previous Exercises
+#### Backward Compatibility with Previous Exercises
 
 The existing `orders` table is preserved to maintain compatibility with previous course exercises.
 
@@ -222,7 +222,7 @@ order_items
 ├─ quantity
 └─ unit_price
 ```
-## Create links order_items an orders via key order_id 
+####Create links order_items an orders via key order_id 
 
 ```plain text
 orders.order_id
@@ -232,9 +232,15 @@ orders.order_id
 order_items.order_id
 
 ```
+#### Final Project Test Customer and Order
 
-### 4. Build a File-to-Database Workflow
-### 4.1. Populate Items and Order Items
+- A new customer `LiR` with `customer_id = 7` is created for the final project.
+- A new order `109` is linked to this customer.
+- The legacy `product`, `quantity`, and `unit_price` columns in `orders` are preserved for backward compatibility but are not used for the new normalized order.
+- Product information for order `109` will be stored through `orders_items` and `items`.
+
+### 6.4. Build a File-to-Database Workflow
+#### 4.1. Populate Items and Order Items
 
 - The existing `orders` table is preserved for backward compatibility.
 - Products are stored separately in the new `items` table.
@@ -259,13 +265,6 @@ SELECT *
 FROM items
 ORDER BY id;
 ```
-
-### Final Project Test Customer and Order
-
-- A new customer `LiR` with `customer_id = 7` is created for the final project.
-- A new order `109` is linked to this customer.
-- The legacy `product`, `quantity`, and `unit_price` columns in `orders` are preserved for backward compatibility but are not used for the new normalized order.
-- Product information for order `109` will be stored through `orders_items` and `items`.
 
 
 Populate the relationship table:
@@ -388,7 +387,7 @@ WHERE oi.order_id = 109
 ORDER BY oi.id;
 ```
 
-### 4.4. Prepaire Step: Build the File-to-Database Workflow
+#### 4.4 Prepaire Step: Build the File-to-Database Workflow
 
     order_316_customer_7.csv
             ↓
@@ -461,7 +460,7 @@ ORDER BY oi.id;
             316,7,,1,2500.00,2026-10-21
             316,7,2,2,800.00,2026-10-21
         ```
-#### 4.4.2 Validate records before loading them into the database
+##### 4.4.2 Validate records before loading them into the database
 
 ```
 psql -U postgres -d retail_db
@@ -496,7 +495,7 @@ CREATE TABLE orders_items_raw (
 );  
 ```
 
-#### 4.4.3 Load valid records into the appropriate PostgreSQL tables. 
+##### 4.4.3 Load valid records into the appropriate PostgreSQL tables. 
     -  Cllear Buffer
     ``` 
         \r
@@ -525,7 +524,7 @@ CSV HEADER;
 ```text
 \! cd
 ```
-#### 4.4.4 Handle Invalid or Incomplete Records Appropriately
+#### 4.5 Handle Invalid or Incomplete Records Appropriately
 
 Invalid or incomplete records are identified in the `orders_items_raw` table before they are loaded into the final `orders_items` table.
 
@@ -578,7 +577,7 @@ ADD COLUMN error_reason VARCHAR(100);
     WHERE price <= 0;
 
 ```
-#### 4.4.5. Design the workflow so that repeated execution does not unnecessarily duplicate existing records.
+#### 4.6 Design the workflow so that repeated execution does not unnecessarily duplicate existing records.
     ```sql
         select count(*) as dubl_count
         from orders_items_raw;
@@ -638,7 +637,7 @@ ADD COLUMN error_reason VARCHAR(100);
         316 | 2 | ...   ← вторая получает Duplicate item
     ```
 
-#### 4.4.6. Explain how idempotency and safe reprocessing are supported.
+#### 4.7 Explain how idempotency and safe reprocessing are supported.
 #### Idempotency and Safe Reprocessing
 
 - Raw source data is first loaded into the `orders_items_raw` staging table.
@@ -735,7 +734,7 @@ ON CONFLICT (order_id, item_id) DO NOTHING;
 
 
 
-### 5. Explore the Data with SQL
+### 6.5. Explore the Data with SQL
 
 Use SQL to analyse the loaded retail data stored in PostgreSQL.
 
