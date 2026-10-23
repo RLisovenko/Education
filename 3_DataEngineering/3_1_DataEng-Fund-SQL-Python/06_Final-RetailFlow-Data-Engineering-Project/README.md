@@ -736,67 +736,466 @@ ON CONFLICT (order_id, item_id) DO NOTHING;
 
 ### 6.5. Explore the Data with SQL
 
-Use SQL to analyse the loaded retail data stored in PostgreSQL.
+#### 6.5.1. Filtering and Sorting Records
 
-#### 5.1 Filtering and Sorting Records
+Filtering and sorting are used to retrieve specific records from the database and organize the results in a meaningful order.
 
-Use `WHERE`, `ORDER BY`, and other filtering conditions to retrieve specific records and organize query results.
+WHERE filters records according to specified conditions.
 
-#### 5.2 Calculating Totals, Averages, and Counts
+ORDER BY sorts the returned records.
 
-Use aggregate functions such as `SUM()`, `AVG()`, and `COUNT()` to calculate summary values from the retail data.
+ASC sorts values in ascending order.
 
-#### 5.3 Grouping Data for Business Analysis
+DESC sorts values in descending order.
 
-Use `GROUP BY` to summarize data by customers, orders, items, or other business dimensions.
+Example: display all order items for order 316 and sort them by price from highest to lowest.
+```sql
+SELECT
+    order_id,
+    item_id,
+    quantity,
+    price
+FROM orders_items
+WHERE order_id = 316
+ORDER BY price DESC;
+```
+Example: display all orders for customer 7, sorted by order date.
+```sql
+SELECT *
+FROM orders
+WHERE customer_id = 7
+ORDER BY order_date ASC;
+```
+These queries demonstrate how filtering and sorting can be used to explore specific customer and order data stored in PostgreSQL.
 
-#### 5.4 Joining Related Tables
+#### 6.5.2. Calculating Totals, Averages, and Counts
+##### 6.5.2.1. Two additional valid records
+- Two additional valid records were added to the input CSV file to make the final SQL analysis more illustrative.
+- `TRUNCATE TABLE orders_items_raw;` removes all previously loaded raw records before reloading the updated CSV file.
+- This keeps the staging table synchronized with the current source file and avoids unnecessary duplicates in the raw layer.
+- Even if duplicate records remain in the raw table, the final `orders_items` table is protected by the unique constraint on `(order_id, item_id)` and `ON CONFLICT DO NOTHING`.
 
-Use SQL `JOIN` operations to combine information from related tables:
+```sql
+TRUNCATE TABLE orders_items_raw;
+```
+- Reload the updated CSV file into the `orders_items_raw` staging table.
 
-- `customers`
-- `orders`
-- `orders_items`
-- `items`
+```sql
+\copy orders_items_raw (order_id, customer_id, item_id, quantity, price, order_date) FROM 'in_order_316_customer_7.csv' DELIMITER ',' CSV HEADER;
+```
 
-This allows customer, order, product, quantity, and price information to be analysed together.
+- The updated file now contains **8 records**, including two additional valid records for further SQL analysis.
 
-#### 5.5 Calculating Sales Metrics
+- After reloading and validating the updated raw data, only valid records are transferred to the final `orders_items` table.
+- Existing `(order_id, item_id)` combinations are skipped automatically, so only new valid order items are added.
 
-Calculate useful business metrics such as:
+- The `UPDATE` statement cleans and validates all records in the `orders_items_raw` staging table in one step.
+- Invalid quantities (`quantity <= 0`) are replaced with `NULL`.
+- Invalid prices (`price <= 0`) are replaced with `NULL`.
+- Missing `item_id` values are marked with `Missing item_id`.
+- Invalid quantities are marked with `Missing quantity`.
+- Invalid prices are marked with the original invalid value.
+- Fully duplicated records are detected using all relevant columns and marked as duplicates.
+- Valid records remain with `error_reason = NULL` and can later be loaded into the final `orders_items` table.
+```sql
+UPDATE orders_items_raw r
+SET
+    quantity = CASE
+        WHEN r.quantity <= 0 THEN NULL
+        ELSE r.quantity
+    END,
 
-- total order value
-- total quantity sold
-- average item price
-- sales by customer
-- sales by item
+    price = CASE
+        WHEN r.price <= 0 THEN NULL
+        ELSE r.price
+    END,
 
-The basic sales calculation is:
+    error_reason = CASE
+        WHEN r.item_id IS NULL
+            THEN 'Missing item_id'
 
-`quantity × price`
+        WHEN r.quantity <= 0
+            THEN 'Missing quantity'
 
-#### 5.6 Common Table Expressions (CTEs)
+        WHEN r.price <= 0
+            THEN 'Invalid price: ' || r.price::text
 
-Use `WITH` and Common Table Expressions (CTEs) to divide complex SQL queries into clear and reusable logical steps.
+        WHEN (
+            r.order_id,
+            r.customer_id,
+            r.item_id,
+            r.quantity,
+            r.price,
+            r.order_date
+        ) IN (
+            SELECT
+                order_id,
+                customer_id,
+                item_id,
+                quantity,
+                price,
+                order_date
+            FROM orders_items_raw
+            GROUP BY
+                order_id,
+                customer_id,
+                item_id,
+                quantity,
+                price,
+                order_date
+            HAVING COUNT(*) > 1
+        )
+            THEN 'Duplicate item_id: ' || r.item_id::text ||
+                 ', quantity: ' || r.quantity::text
 
-CTEs make analytical queries easier to read, understand, and maintain.
+        ELSE NULL
+    END;
+```
 
-#### 5.7 Window Functions
+- Only validated records with `error_reason IS NULL` are inserted into the final `orders_items` table.
+- Existing `(order_id, item_id)` combinations are skipped automatically to prevent duplicates.
 
-Use SQL window functions with `OVER()` to perform analytical calculations without grouping individual rows into a single result.
+```sql
+INSERT INTO orders_items (
+    order_id,
+    item_id,
+    quantity,
+    price
+)
+SELECT
+    r.order_id,
+    r.item_id,
+    r.quantity,
+    r.price
+FROM orders_items_raw r
+WHERE r.error_reason IS NULL
+ON CONFLICT (order_id, item_id) DO NOTHING;
+```
 
-Window functions can be used for:
+- `error_reason IS NULL` allows only validated records to be loaded.
+- `ON CONFLICT (order_id, item_id) DO NOTHING` prevents existing order items from being inserted again.
 
-- ranking records
-- numbering rows
-- comparing values
-- calculating running totals
-- analysing values within groups
+```sql
+UPDATE orders_items oi
+SET
+    quantity = r.quantity,
+    price = r.price
+FROM orders_items_raw r
+WHERE oi.order_id = r.order_id
+  AND oi.item_id = r.item_id
+  AND oi.order_id = 316
+  AND r.quantity > 0
+  AND r.price > 0;
+```
+
+##### 6.5.2.2. Aggregate functions are used to calculate summary values from the loaded retail data.
+
+- `SUM()` calculates totals.
+- `AVG()` calculates average values.
+- `COUNT()` counts records.
+
+- Calculate the total quantity and total sales value for order `316`:
+
+```sql
+SELECT
+    order_id,
+    SUM(quantity) AS total_quantity,
+    SUM(quantity * price) AS total_sales
+FROM orders_items
+WHERE order_id = 316
+GROUP BY order_id;
+```
+```text
+Result:
+
+order_id | total_quantity | total_sales
+---------+----------------+------------
+316      | 3              | 91000.00
+
+The order contains a total of 3 items.
+
+The total sales value is 91,000.00.
+```
+Calculate the average item price for order `316`:
+
+```sql
+SELECT
+    order_id,
+    AVG(price) AS average_price
+FROM orders_items
+WHERE order_id = 316
+GROUP BY order_id;
+```
+```text
+Result:
+
+order_id | average_price
+---------+--------------------
+316      | 30333.333333333333
+
+The average item price for order 316 is approximately 30,333.33.
+```
+Count the number of items in order `316`:
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS item_count
+FROM orders_items
+WHERE order_id = 316
+GROUP BY order_id;
+```
+
+#### 6.5.3. Grouping Data for Business Analysis
+
+`GROUP BY` is used to organize records into groups and calculate summary values for each group.
+
+The following query groups order items by `item_id` and calculates the total quantity and sales value for each item in order `316`.
+
+```sql
+SELECT
+    item_id,
+    SUM(quantity) AS total_quantity,
+    SUM(quantity * price) AS total_sales
+FROM orders_items
+WHERE order_id = 316
+GROUP BY item_id
+ORDER BY item_id;
+```
+
+Expected result:
+
+```text
+item_id | total_quantity | total_sales
+--------+----------------+------------
+1       | 1              | 75000.00
+3       | 1              | 7000.00
+4       | 1              | 9000.00
+```
+
+- `GROUP BY item_id` creates a separate group for each item.
+- `SUM(quantity)` calculates the quantity sold for each item.
+- `SUM(quantity * price)` calculates the sales value generated by each item.
+- This type of grouping can be used for product-level business analysis.
+
+#### 6.5.4. Joining Customer, Order, Product, and Transaction Information
+
+`JOIN` is used to combine related information stored in separate relational tables.
+
+The following query combines:
+
+- customer information from `customers`
+- order information from `orders`
+- order item information from `orders_items`
+- product information from `items`
+
+```sql
+SELECT
+    c.customer_id,
+    c.customer_name,
+    o.order_id,
+    o.order_date,
+    i.item_name,
+    oi.quantity,
+    oi.price,
+    oi.quantity * oi.price AS line_total
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN orders_items oi
+    ON o.order_id = oi.order_id
+JOIN items i
+    ON oi.item_id = i.id
+WHERE o.order_id = 316
+ORDER BY oi.item_id;
+```
+
+Expected result:
+
+```text
+customer_id | customer_name | order_id | order_date  | item_name | quantity | price    | line_total
+------------+---------------+----------+-------------+-----------+----------+----------+-----------
+7           | LiR           | 316      | 2026-10-21  | ...       | 1        | 75000.00 | 75000.00
+7           | LiR           | 316      | 2026-10-21  | ...       | 1        | 7000.00  | 7000.00
+7           | LiR           | 316      | 2026-10-21  | ...       | 1        | 9000.00  | 9000.00
+```
+
+- The joins connect the relational model through primary and foreign keys.
+- Customer, order, product, quantity, and price information can be analysed together.
+- `quantity * price` calculates the value of each individual order line.
+
+The relational tables are connected using existing primary and foreign keys.
+
+The query combines customer, order, order item, and product information into one result.
+
+```sql
+SELECT
+    c.customer_name,
+    o.order_id,
+    i.item_name,
+    oi.quantity,
+    oi.price
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+JOIN orders_items oi
+    ON o.order_id = oi.order_id
+JOIN items i
+    ON oi.item_id = i.id
+WHERE o.order_id = 316;
+```
+
+- `customers.customer_id` is linked to `orders.customer_id`.
+- `orders.order_id` is linked to `orders_items.order_id`.
+- `orders_items.item_id` is linked to `items.id`.
+- No additional customer identifier is required because `customer_id` already acts as the primary key in the `customers` table.
+- The result shows who placed the order, which products were included, their quantities, and their prices.
+
+#### 6.5.5. Calculating Useful Sales Metrics
+
+Sales metrics help summarize the financial value of customer orders.
+
+The following query calculates the total value of order `316` and the total number of items included in the order.
+
+```sql
+SELECT
+    o.order_id,
+    c.customer_name,
+    SUM(oi.quantity) AS total_quantity,
+    SUM(oi.quantity * oi.price) AS total_order_value
+FROM orders o
+JOIN customers c
+    ON o.customer_id = c.customer_id
+JOIN orders_items oi
+    ON o.order_id = oi.order_id
+WHERE o.order_id = 316
+GROUP BY
+    o.order_id,
+    c.customer_name;
+```
+
+Expected result:
+
+```text
+order_id | customer_name | total_quantity | total_order_value
+---------+---------------+----------------+------------------
+316      | LiR           | 3              | 91000.00
+```
+
+- `SUM(oi.quantity)` calculates the total number of items in the order.
+- `SUM(oi.quantity * oi.price)` calculates the total financial value of the order.
+- The query combines customer and order information to produce a useful business metric.
+
+#### 6.5.6. Using Common Table Expressions (CTEs)
+
+A Common Table Expression (CTE) is a temporary named result set created with `WITH`.
+
+CTEs make complex SQL queries easier to read and organize.
+
+The following query first calculates the value of each order item and then calculates the total value of order `316`.
+
+```sql
+WITH order_details AS (
+    SELECT
+        oi.order_id,
+        oi.item_id,
+        oi.quantity,
+        oi.price,
+        oi.quantity * oi.price AS line_total
+    FROM orders_items oi
+    WHERE oi.order_id = 316
+)
+SELECT
+    order_id,
+    SUM(quantity) AS total_quantity,
+    SUM(line_total) AS total_order_value
+FROM order_details
+GROUP BY order_id;
+```
+
+Expected result:
+
+```text
+order_id | total_quantity | total_order_value
+---------+----------------+------------------
+316      | 3              | 91000.00
+```
+
+- The CTE `order_details` calculates `line_total` for each item.
+- The main query uses the CTE result to calculate totals.
+- This approach separates the calculation into clear logical steps and makes the query easier to maintain.
+
+#### 6.5.7. Using Window Functions
+
+Window functions perform analytical calculations across a set of rows without collapsing them into a single grouped result.
+
+The following query ranks the items in order `316` by price from highest to lowest.
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    quantity,
+    price,
+    ROW_NUMBER() OVER (
+        PARTITION BY order_id
+        ORDER BY price DESC
+    ) AS price_rank
+FROM orders_items
+WHERE order_id = 316;
+```
+
+Expected result:
+
+```text
+order_id | item_id | quantity | price    | price_rank
+---------+---------+----------+----------+-----------
+316      | 1       | 1        | 75000.00 | 1
+316      | 4       | 1        | 9000.00  | 2
+316      | 3       | 1        | 7000.00  | 3
+```
+
+- `ROW_NUMBER()` assigns a sequential number to each row.
+- `PARTITION BY order_id` performs the calculation separately for each order.
+- `ORDER BY price DESC` ranks the most expensive item first.
+- Unlike `GROUP BY`, the window function keeps all individual rows visible.
+
+Functions and clauses used:
+
+- ROW_NUMBER() — assigns a sequential number to each row.
+
+- OVER() — defines the window over which the window function operates.
+
+- PARTITION BY order_id — divides the records into separate groups for each order.
+
+- ORDER BY price DESC — sorts items from the highest price to the lowest price inside each order.
+
+- AS price_rank — gives the calculated row number the alias price_rank.
+
+Unlike GROUP BY, a window function does not combine multiple records into one row. Each original order item remains visible while the analytical value is added as an additional column.
+
+### 6.6. Apply Defensive SQL Practices
+
+Defensive SQL is used to make queries more reliable when the database contains incomplete, invalid, or unexpected data.
+
+#### 6.6.1. Identify NULL Values
+
+Before calculations or joins are performed, columns should be checked for missing values.
+
+```sql
+SELECT *
+FROM orders_items
+WHERE order_id IS NULL
+   OR item_id IS NULL
+   OR quantity IS NULL
+   OR price IS NULL;
+```
+
+- `IS NULL` identifies records with missing values.
+- Detecting missing values before calculations helps prevent incorrect analytical results.
+- In the final `orders_items` table, important business fields should normally contain valid values.
 
 
-
-
-        
 ## ---------------Executor
 
 - Performed by: R. Lisovenko
