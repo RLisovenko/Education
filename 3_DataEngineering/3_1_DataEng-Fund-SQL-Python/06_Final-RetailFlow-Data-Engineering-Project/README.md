@@ -240,7 +240,7 @@ order_items.order_id
 - Product information for order `109` will be stored through `orders_items` and `items`.
 
 ### 6.4. Build a File-to-Database Workflow
-#### 4.1. Populate Items and Order Items
+#### 6.4.1. Populate Items and Order Items
 
 - The existing `orders` table is preserved for backward compatibility.
 - Products are stored separately in the new `items` table.
@@ -387,7 +387,7 @@ WHERE oi.order_id = 109
 ORDER BY oi.id;
 ```
 
-#### 4.4 Prepaire Step: Build the File-to-Database Workflow
+#### 6.4.4 Prepaire Step: Build the File-to-Database Workflow
 
     order_316_customer_7.csv
             ↓
@@ -524,7 +524,7 @@ CSV HEADER;
 ```text
 \! cd
 ```
-#### 4.5 Handle Invalid or Incomplete Records Appropriately
+#### 6.4.5 Handle Invalid or Incomplete Records Appropriately
 
 Invalid or incomplete records are identified in the `orders_items_raw` table before they are loaded into the final `orders_items` table.
 
@@ -577,7 +577,7 @@ ADD COLUMN error_reason VARCHAR(100);
     WHERE price <= 0;
 
 ```
-#### 4.6 Design the workflow so that repeated execution does not unnecessarily duplicate existing records.
+#### 6.4.6 Design the workflow so that repeated execution does not unnecessarily duplicate existing records.
     ```sql
         select count(*) as dubl_count
         from orders_items_raw;
@@ -637,7 +637,7 @@ ADD COLUMN error_reason VARCHAR(100);
         316 | 2 | ...   ← вторая получает Duplicate item
     ```
 
-#### 4.7 Explain how idempotency and safe reprocessing are supported.
+#### 6.4.7 Explain how idempotency and safe reprocessing are supported.
 #### Idempotency and Safe Reprocessing
 
 - Raw source data is first loaded into the `orders_items_raw` staging table.
@@ -1182,8 +1182,6 @@ Defensive SQL is used to make queries more reliable when the database contains i
 
 #### 6.6.2. Handle NULL Values Appropriately in Calculations
 
-#### 6.6.2. Handle NULL Values Appropriately in Calculations
-
 `COALESCE()` is used to replace `NULL` values with a safe default value during calculations.
 
 The following query calculates the total value of order items while treating missing `quantity` or `price` values as `0`.
@@ -1680,7 +1678,7 @@ Example:
 
 ```sql
 
-
+TO_DATE(...)
 
 ```
 
@@ -1713,6 +1711,630 @@ WHERE error_reason IS NOT NULL;
 - Rejected records remain available for investigation instead of being silently deleted.
 - Only records with `error_reason IS NULL` are loaded into the final `orders_items` table.
 - This approach keeps problematic source data traceable and supports safer data cleaning.
+
+### 6.9. Design the Workflow for Reliable Reprocessing.
+#### 6.9.1. Evaluate how the workflow behaves when it is executed more than once.
+
+The workflow is designed so that repeated execution does not create duplicate records in the final `orders_items` table.
+
+The combination of `order_id` and `item_id` is protected by a unique constraint.
+
+```sql
+SELECT
+    conname,
+    pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'orders_items'::regclass
+  AND conname = 'uq_order_item';
+```
+
+Expected constraint:
+
+```text
+UNIQUE (order_id, item_id)
+```
+
+The final loading step also uses:
+
+```sql
+ON CONFLICT (order_id, item_id) DO NOTHING
+```
+
+This means that if the same valid record is processed again, PostgreSQL skips it instead of inserting a duplicate.
+
+The final number of records therefore remains unchanged after repeated execution.
+#### 6.9.2. Identify Operations That Could Create Duplicate Results
+
+Some workflow operations can create duplicate records when the same source data is processed more than once.
+
+Potential duplicate-producing operations include:
+
+- reloading the same CSV file into the staging table
+- inserting already processed records into the final table
+- rerunning an `INSERT ... SELECT` statement without duplicate protection
+- processing the same order and item combination multiple times
+
+The raw staging table can contain duplicates because it is designed to preserve incoming source data.
+
+- The `orders_items` table is checked to confirm that the unique constraint on `(order_id, item_id)` already exists.
+
+```sql
+\d orders_items
+```
+
+The final `orders_items` table prevents duplicate order items using:
+
+```sql
+SELECT
+    conname,
+    contype,
+    pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'orders_items'::regclass;
+```
+or
+
+```sql
+ALTER TABLE orders_items
+ADD CONSTRAINT uq_order_item
+UNIQUE (order_id, item_id);
+```
+
+Repeated inserts are handled safely using:
+
+```sql
+ON CONFLICT (order_id, item_id) DO NOTHING
+```
+
+This ensures that repeated workflow execution does not create duplicate records in the final table.
+
+#### 6.9.3. Apply Idempotent Processing Principles
+
+Idempotent processing ensures that running the same workflow multiple times produces the same final database state without creating duplicate records.
+
+The final load uses the unique combination of `order_id` and `item_id` together with `ON CONFLICT DO NOTHING`.
+
+```sql
+INSERT INTO orders_items (
+    order_id,
+    item_id,
+    quantity,
+    price
+)
+SELECT
+    r.order_id,
+    r.item_id,
+    r.quantity,
+    r.price
+FROM orders_items_raw r
+WHERE r.error_reason IS NULL
+ON CONFLICT (order_id, item_id) DO NOTHING;
+```
+
+- Only validated records with `error_reason IS NULL` are loaded.
+- Existing `(order_id, item_id)` combinations are skipped.
+- Reprocessing the same source file does not create additional duplicate records.
+- The final result remains consistent after repeated execution.
+
+
+#### 6.9.4. Explain How Previously Processed Data Can Be Identified
+
+Previously processed data can be identified by checking whether the same business key already exists in the final table.
+
+For `orders_items`, the business key is the combination of:
+
+```text
+order_id + item_id
+```
+
+The following query checks whether records from the raw staging table already exist in the final table:
+
+```sql
+SELECT
+    r.order_id,
+    r.item_id
+FROM orders_items_raw r
+  JOIN orders_items oi
+    ON r.order_id = oi.order_id
+   AND r.item_id = oi.item_id;
+```
+
+- Matching `(order_id, item_id)` combinations indicate records that have already been processed.
+- These records do not need to be inserted again.
+DISTINCT = убрать повторы
+DESC     = сортировать по убыванию
+ASC      = сортировать по возрастанию
+
+```sql
+SELECT DISTINCT
+    r.order_id,
+    r.item_id
+FROM orders_items_raw r
+JOIN orders_items oi
+    ON r.order_id = oi.order_id
+   AND r.item_id = oi.item_id
+ORDER BY
+    r.order_id,
+    r.item_id;
+```    
+- This supports safe reprocessing and prevents duplicate final records.
+```sql
+SELECT
+    order_id,
+    item_id,
+    COUNT(*) AS cnt
+FROM orders_items
+GROUP BY order_id, item_id
+HAVING COUNT(item_id) > 1;
+```
+
+#### 6.9.5. Describe How Incremental Loads Could Process Only New or Changed Records
+
+Incremental loading processes only new or changed records instead of reloading the complete dataset.
+
+For `orders_items`, new records can be identified by comparing the raw staging table with the final table using the business key `(order_id, item_id)`.
+
+```sql
+SELECT
+    r.order_id,
+    r.item_id,
+    r.quantity,
+    r.price
+FROM orders_items_raw r
+LEFT JOIN orders_items oi
+    ON r.order_id = oi.order_id
+   AND r.item_id = oi.item_id
+WHERE oi.order_id IS NULL
+  AND r.error_reason IS NULL;
+```
+
+- `LEFT JOIN` compares raw records with already processed records.
+- `oi.order_id IS NULL` identifies records that do not yet exist in the final table.
+- `error_reason IS NULL` ensures that only valid records are considered.
+- This approach allows the workflow to process only new records instead of reloading all existing data.
+
+#### 6.9.6. Define How Failed Processing Steps Could Be Safely Rerun
+
+Failed processing steps should be rerun without corrupting already processed data or creating duplicate records.
+
+The staging table can be cleared and reloaded from the source file when a processing step fails.
+
+```sql
+TRUNCATE TABLE orders_items_raw;
+```
+
+The source CSV file can then be loaded again into the staging table.
+
+```sql
+\copy orders_items_raw (order_id, customer_id, item_id, quantity, price, order_date) FROM 'in_order_316_customer_7.csv' DELIMITER ',' CSV HEADER;
+```
+
+After validation and cleaning, valid records are loaded into the final table using duplicate protection.
+
+```sql
+INSERT INTO orders_items (
+    order_id,
+    item_id,
+    quantity,
+    price
+)
+SELECT
+    r.order_id,
+    r.item_id,
+    r.quantity,
+    r.price
+FROM orders_items_raw r
+WHERE r.error_reason IS NULL
+  AND r.order_id IS NOT NULL
+  AND r.item_id IS NOT NULL
+  AND r.quantity IS NOT NULL
+  AND r.quantity > 0
+  AND r.price IS NOT NULL
+  AND r.price > 0
+ON CONFLICT (order_id, item_id) DO NOTHING;
+```
+
+- The staging layer can be safely rebuilt from the original source file.
+- Validation is repeated before the final load.
+- Existing final records are protected by the unique constraint.
+- `ON CONFLICT DO NOTHING` prevents duplicate inserts during reruns.
+- This allows failed workflow steps to be repeated safely.
+
+#### 6.9.7. Verify That Reprocessing Produces Consistent Database Results
+
+After the workflow is rerun, the final table should contain the same valid records without creating additional duplicates.
+
+The following query checks the number of records for each order after reprocessing:
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS item_count
+FROM orders_items
+GROUP BY order_id
+ORDER BY order_id;
+```
+
+Expected result:
+
+```text
+order_id | item_count
+---------+-----------
+109      | 4
+316      | 3
+```
+
+The following query checks that no duplicate `(order_id, item_id)` combinations exist:
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    COUNT(*) AS duplicate_count
+FROM orders_items
+GROUP BY
+    order_id,
+    item_id
+HAVING COUNT(*) > 1;
+```
+
+- The record counts should remain unchanged after repeated processing.
+- The duplicate check should return no rows.
+- This confirms that the workflow can be safely rerun without changing the final valid database state.
+- Consistent results after reprocessing demonstrate idempotent behavior.
+
+### 6.10. Troubleshoot and Validate the Complete Workflow
+
+#### 6.10.1. Missing Input Files
+
+The workflow should verify that the required source file exists before attempting to load data into PostgreSQL.
+
+A missing input file causes the loading step to fail before any records are processed.
+
+The source file can be checked from the command line:
+
+```powershell
+Test-Path .\data\raw\in_order_316_customer_7.csv
+Test-Path .\in_order_316_customer_7.csv
+\! powershell -Command "Test-Path '.\in_order_316_customer_7.csv'"
+\! dir in_order_316_customer_7.csv
+```
+
+Expected result:
+
+```text
+True
+```
+
+If the result is `False`, the workflow should:
+
+- verify the file name and path
+- confirm that the source file was copied to the correct `data/raw` directory
+- stop the loading step until the file is available
+- avoid running downstream processing on incomplete input data
+
+Checking the source file before loading helps identify pipeline failures at the earliest possible stage.
+
+#### 6.10.2. Unexpected Schema Changes
+
+Unexpected schema changes can cause the loading process to fail when the structure of the incoming file no longer matches the expected database structure.
+
+The source CSV header can be checked before loading:
+
+```powershell
+\! powershell -Command "Get-Content .\in_order_316_customer_7.csv -TotalCount 1"
+```
+
+Expected header:
+
+```text
+order_id,customer_id,item_id,quantity,price,order_date
+```
+
+The PostgreSQL staging table structure can be checked with:
+
+```sql
+\d orders_items_raw
+```
+
+- The source columns should match the expected staging-table columns.
+- Added, removed, renamed, or reordered columns may indicate schema drift.
+- Schema differences should be investigated before loading data.
+- The workflow should not silently load data when the incoming structure is unexpected.
+
+#### 6.10.3. Invalid Data Types
+
+Invalid data types can cause loading failures or incorrect calculations.
+
+The structure of the staging table can be checked with:
+
+```sql 
+\d orders_items_raw
+```
+
+The expected types include:
+
+```text id="uaz7xv"
+order_id     integer
+customer_id  integer
+item_id      integer
+quantity     integer
+price        numeric
+order_date   date
+```
+
+Records containing values that cannot be converted to the expected data types should be rejected or corrected before the final load.
+
+Example type conversion:
+
+```sql 
+SELECT
+    order_id::INTEGER,
+    item_id::INTEGER,
+    quantity::INTEGER,
+    price::NUMERIC(10,2),
+    order_date::DATE
+FROM orders_items_raw;
+```
+
+- Type conversion errors indicate inconsistent source data.
+- Invalid values should be investigated before loading.
+- Correct data types help ensure reliable calculations and database operations.
+
+#### 6.10.4. Duplicate Records
+
+Duplicate records can cause incorrect counts, duplicated sales values, and unreliable analysis.
+
+The following query checks for duplicate order items in the final table:
+
+```sql
+SELECT
+    order_id,
+    item_id,
+    COUNT(*) AS duplicate_count
+FROM orders_items
+GROUP BY
+    order_id,
+    item_id
+HAVING COUNT(*) > 1;
+```
+
+- `GROUP BY order_id, item_id` checks duplicates within each order.
+- `HAVING COUNT(*) > 1` returns only duplicated order-item combinations.
+- An empty result confirms that no duplicate order items exist.
+- The final table is additionally protected by the unique constraint on `(order_id, item_id)`.
+- `ON CONFLICT DO NOTHING` prevents duplicate records during repeated loading.
+
+#### 6.10.5. Database Connection Failures
+
+Database connection failures can stop the pipeline before data is loaded or validated.
+
+The PostgreSQL connection can be tested directly from the command line:
+
+```powershell
+psql -U postgres -d retail_db
+```
+
+If the connection is successful, the PostgreSQL prompt should appear:
+
+```text
+retail_db=#
+```
+
+If the connection fails, check:
+
+- whether the PostgreSQL service is running
+- whether the database name is correct
+- whether the username and password are valid
+- whether the PostgreSQL port is available
+- whether the connection settings match the local environment
+
+A connection failure should be resolved before any loading or SQL processing step is executed.
+
+#### 6.10.6. SQL Query Errors
+
+SQL query errors can occur because of incorrect syntax, wrong table or column names, invalid data types, or incomplete statements.
+
+Common checks include:
+
+- verify table and column names
+- check SQL syntax
+- confirm that all parentheses and quotation marks are closed
+- verify that data types match the operation
+- execute complex queries step by step to identify the failing part
+
+Example:
+
+```sql
+SELECT *
+FROM orders_items
+WHERE order_id = 316;
+```
+
+If a SQL statement fails in `psql`, the current query buffer can be cleared with:
+
+```text
+\r
+```
+
+- SQL errors should be corrected before continuing the pipeline.
+- Testing smaller parts of a complex query helps identify the exact source of the problem.
+- The failed query should be rerun only after the cause
+
+#### 6.10.7. Incorrect Joins
+
+Incorrect joins can duplicate records, exclude valid rows, or connect unrelated data.
+
+The join conditions should use the correct primary-key and foreign-key relationships.
+
+```sql
+SELECT
+    o.order_id,
+    oi.item_id,
+    i.item_name,
+    COUNT(*) AS join_count
+FROM orders o
+JOIN orders_items oi
+    ON o.order_id = oi.order_id
+JOIN items i
+    ON oi.item_id = i.id
+GROUP BY
+    o.order_id,
+    oi.item_id,
+    i.item_name
+ORDER BY
+    o.order_id,
+    oi.item_id
+
+#### 6.10.8. Failed or Incomplete Data Loads
+
+Failed or incomplete loads can result in missing records or inconsistent data between the source file and PostgreSQL.
+
+The loaded row count should be compared with the expected number of source records.
+
+```sql
+SELECT COUNT(*) AS raw_rows
+FROM orders_items_raw;
+```
+
+The final loaded records can also be checked:
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS final_rows
+FROM orders_items
+GROUP BY order_id
+ORDER BY order_id;
+```
+
+- The raw row count should match the number of records in the input file.
+- The final row count should match the number of valid records after validation and cleaning.
+- Missing rows may indicate a failed load, validation problem, or rejected record.
+- If loading fails, the staging table can be cleared and the source file can be safely reloaded.
+#### 6.10.9. Execute and Validate the Complete Workflow
+
+The complete workflow is executed from the source CSV file through validation, cleaning, loading, and final SQL verification.
+
+The workflow follows this sequence:
+
+```text
+Input CSV
+    ↓
+orders_items_raw
+    ↓
+Validation
+    ↓
+Cleaning
+    ↓
+Rejected / Invalid Records
+    ↓
+Valid Records
+    ↓
+orders_items
+    ↓
+SQL Analysis and Validation
+```
+
+The raw staging table is checked first:
+
+```sql
+SELECT COUNT(*) AS raw_rows
+FROM orders_items_raw;
+```
+
+The final table is then checked:
+
+```sql
+SELECT
+    order_id,
+    COUNT(*) AS final_rows
+FROM orders_items
+GROUP BY order_id
+ORDER BY order_id;
+```
+
+### 6.11. Final Project Summary
+
+The RetailFlow Data Engineering project demonstrates an end-to-end structured data processing workflow from raw source files to validated and queryable PostgreSQL tables.
+
+The implemented workflow includes:
+
+- organized project structure with separate folders for raw data, processed data, scripts, documentation, and outputs
+- Git and GitHub version control
+- structured source data in CSV, JSON, and Parquet formats
+- source data inspection and schema validation
+- relational PostgreSQL data model using `customers`, `orders`, `items`, and `orders_items`
+- primary keys, foreign keys, and unique constraints
+- raw staging tables for incoming data
+- file-to-database loading using PostgreSQL
+- validation of missing, invalid, and duplicate records
+- separation of valid and rejected data
+- SQL filtering, sorting, grouping, joins, and aggregations
+- calculation of business and sales metrics
+- Common Table Expressions (CTEs)
+- window functions
+- defensive SQL practices
+- data quality validation
+- data cleaning and preparation
+- idempotent loading using unique constraints and `ON CONFLICT DO NOTHING`
+- incremental loading principles
+- safe reprocessing of source files
+- troubleshooting of common pipeline failures
+- final validation of loaded records and calculated metrics
+
+#### Final Workflow
+
+```text
+Source Files
+CSV / JSON / Parquet
+        ↓
+Raw / Staging Data
+        ↓
+Schema and Data Validation
+        ↓
+Cleaning and Quality Checks
+        ↓
+Invalid Records → Rejected / Investigation
+        ↓
+Valid Records
+        ↓
+PostgreSQL Final Tables
+        ↓
+SQL Analysis
+        ↓
+Business Metrics and Final Validation
+```
+
+#### Final Validation Results
+
+The final PostgreSQL tables contain validated and queryable retail data.
+
+For the test orders:
+
+```text
+order_id | total_quantity | total_sales
+---------+----------------+------------
+109      | 6              | 114100.00
+316      | 3              | 91000.00
+```
+
+Duplicate `(order_id, item_id)` combinations are prevented in the final `orders_items` table using a unique constraint.
+
+Repeated processing does not create additional records because the workflow uses:
+
+```sql
+ON CONFLICT (order_id, item_id) DO NOTHING;
+```
+
+The final workflow therefore supports reliable loading, validation, analysis, idempotent reprocessing, and troubleshooting of structured retail data.
+
+### Project Result
+
+The project transforms raw and potentially inconsistent source data into a structured, validated, and analysis-ready PostgreSQL database.
+
+It demonstrates the core foundational Data Engineering practices covered in the course and provides a reproducible workflow that can be extended for larger datasets and incremental processing.
+
 
 ## ---------------Executor
 
