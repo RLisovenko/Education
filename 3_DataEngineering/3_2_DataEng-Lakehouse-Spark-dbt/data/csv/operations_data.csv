@@ -1,0 +1,6 @@
+record_id,source_system,category,quantity,amount,event_date
+1,CRM,Customer,12,1500.50,2026-08-01
+2,ERP,Inventory,8,2400.00,2026-08-02
+3,API,Orders,15,3200.75,2026-08-03
+4,CRM,Customer,10,1800.25,2026-08-04
+5,ERP,Inventory,20,4100.00,2026-08-05

@@ -1,22 +1,36 @@
-﻿#pip install -r requirements.txt
-#pip list
-#git version 2.55.0.windows.5
-
-# Course 2 — Lakehouse Data Pipelines with Spark and dbt
-# Python 3.12.10 / Java 17
-
-# Official installer:
-# https://www.python.org/downloads/release/python-31210/
-# https://adoptium.net/temurin/releases/?version=17
-
-# Installation:
-# python -m pip install -r requirements.txt
-
-# Course 2 — Lakehouse Data Pipelines with Spark and dbt
-# Python 3.12.10 / Java 17
+﻿# ------------------------------------------------------------
+# Course: Lakehouse Data Pipelines with Spark and dbt
+# Performed by: R. Lisovenko
+# Started: 27.10.2026
+# Python: 3.12.10
+# Java: Eclipse Temurin JDK 17
+# ------------------------------------------------------------
 
 # Module 1 — Distributed Processing with PySpark
-pyspark==4.2.0
-pandas
-pyarrow
 
+# Apache Spark Python API.
+pyspark==4.2.0
+
+# Python-to-JVM communication.
+# Installed automatically as a PySpark dependency.
+py4j==0.10.9.9
+
+# Data manipulation and CSV processing.
+# Pandas 2.x avoids the current PySpark warning for Pandas >= 3.0.
+pandas>=2.2,<3.0
+
+# Apache Arrow and Parquet file support.
+pyarrow==26.0.0
+
+# Numerical computing dependency.
+numpy>=1.26,<3.0
+
+# ------------------------------------------------------------
+# Module 2 — Transformation Engineering with dbt
+# Dependencies will be added when the module starts.
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Module 3 — Orchestration and Lakehouse Foundations
+# Dependencies will be added when the module starts.
+# ------------------------------------------------------------

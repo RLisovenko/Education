@@ -609,19 +609,31 @@ From the project root:
 python .\scripts\py\spark_setup_check.py
 ```
 
-### 11.5 Hadoop Warning on Windows
+### 11.5 Hadoop Windows Utilities and Parquet Write Limitation
 
-**Warning:**
+**Environment:** Windows, PySpark 4.2.0, Hadoop Client API 3.5.0.
+
+**Observed behavior:** Local SparkSession initialization, DataFrame processing, and CSV/JSON reading succeeded. Writing a Parquet dataset with Spark failed in this Windows environment because Hadoop Windows utilities were unavailable (`winutils.exe` not found and `HADOOP_HOME` unset).
 
 ```text
-Did not find winutils.exe
+java.io.FileNotFoundException: HADOOP_HOME and hadoop.home.dir are unset
 ```
 
-This warning may appear when running Spark locally on Windows without Hadoop Windows utilities.
+**Verified workaround for this reading exercise:** Generate a single Parquet file using Pandas and PyArrow, then read it using PySpark. Run from the project root:
 
-The basic PySpark DataFrame verification completed successfully despite this warning.
+```powershell
+# Create the Parquet file without invoking Hadoop's Windows write utilities.
+python -c "import pandas as pd; df = pd.read_csv('data/csv/operations_data.csv'); df.to_parquet('data/parquet/operations_data.parquet', engine='pyarrow', index=False); print('Parquet created successfully')"
 
-**Note:** Additional Hadoop-related functionality may require further configuration.
+# Verify that PySpark reads all three input formats.
+python .\scripts\py\read_data_formats.py
+```
+
+**Important path distinction:** Spark's `DataFrameWriter.parquet(...)` normally creates a *directory* at the target path, containing one or more `part-*.parquet` files. PyArrow's `DataFrame.to_parquet(...)` creates a *single file* at the target path. A directory left by an unsuccessful Spark write at `data/parquet/operations_data.parquet` must not be confused with the PyArrow output file of the same name. Inspect the path before removing or renaming anything.
+
+**Verified result:** PySpark successfully read CSV, JSON, and the PyArrow-generated Parquet file (6 columns and 5 records each).
+
+**Open limitation:** Writing Parquet *with Spark* on this Windows installation remains unresolved. The workaround validates cross-tool Parquet reading, not Spark's Parquet writer. Do not download unverified `winutils.exe` binaries merely to suppress the warning.
 
 ### 11.6 Pandas Compatibility Warning
 
@@ -639,6 +651,137 @@ Some Pandas-related PySpark features may not work correctly.
 
 ---
 
+### 3.3 PySpark and Py4J Integration
+
+PySpark provides a Python API for Apache Spark.
+
+Py4J is automatically installed as a dependency of PySpark
+and enables communication between Python and the Java Virtual
+Machine (JVM).
+
+**Architecture:**
+
+Python → PySpark → Py4J → JVM → Apache Spark
+
+**Key Takeaways:**
+
+- PySpark allows developers to use Apache Spark through Python.
+- Py4J provides communication between Python and Java objects.
+- The Spark engine executes distributed data processing tasks.
+- Python worker processes may be used for Python-based operations.
+
+**Installed Versions:**
+
+| Package | Version |
+|---|---|
+| PySpark | 4.2.0 |
+| Py4J | 0.10.9.9 |
+| Java | 17.0.20.1 |
+
+**Verification:**
+
+    python -m pip show pyspark
+    python -m pip show py4j
+
+### 7.1 Python Dependencies
+
+Python dependencies are managed through `requirements.txt`.
+
+**Course example (Edureka):**
+
+```text
+py4j==0.10.9.9
+pyspark==4.2.0
+
+```
+python ..\py\spark_setup_check.py 
+```
+
+### 1.3.4 Reading CSV, JSON, and Parquet with PySpark
+
+#### Overview
+
+This lesson introduces reading structured and semi-structured data from different file formats using Apache Spark.
+
+PySpark provides the `spark.read` interface for loading data into Spark DataFrames.
+
+```
+python .\scripts\py\read_data_formats.py
+```
+
+```
+    data/
+    ├── csv/
+    │   └── operations_data.csv
+    ├── json/
+    │   └── operations_data.json
+    └── parquet/
+
+    output/
+
+    scripts/
+    ├── create_parquet_data.py
+    └── read_data_formats.py
+```
+
+#### Supported File Formats
+
+| Format  | Description                                         | PySpark Method         |
+| ------- | --------------------------------------------------- | ---------------------- |
+| CSV     | Text-based tabular data                             | `spark.read.csv()`     |
+| JSON    | Structured and semi-structured data                 | `spark.read.json()`    |
+| Parquet | Column-oriented data format optimized for analytics | `spark.read.parquet()` |
+
+#### Learning Objectives
+
+1. Read CSV, JSON, and Parquet files using PySpark.
+2. Understand the differences between file formats.
+3. Load data into Spark DataFrames.
+4. Inspect DataFrame schemas and contents.
+5. Prepare data for further processing and transformations.
+
+#### Basic Syntax
+
+**CSV:**
+
+```python
+df_csv = spark.read.csv(
+    "data/sample.csv",
+    header=True,
+    inferSchema=True
+)
+```
+
+**JSON:**
+
+```python
+df_json = spark.read.json("data/sample.json")
+```
+
+**Parquet:**
+
+```python
+df_parquet = spark.read.parquet("data/sample.parquet")
+```
+
+#### Key Concepts
+
+- **DataFrame:** A distributed collection of structured data.
+- **Schema:** Defines column names and data types.
+- **Schema Inference:** Automatically determines data types from source data.
+- **Columnar Storage:** Stores data by columns, improving efficiency for many analytical workloads.
+
+**Practical Exercise:** Completed — 27.10.2026.
+
+**Verified result:** CSV, JSON, and Parquet were read successfully through PySpark; each DataFrame contained 6 columns and 5 records. The Parquet input was generated with Pandas/PyArrow because Spark's Parquet writer was blocked by the Windows Hadoop utilities configuration (see Section 11.5).
+
+**Next Step:** Continue Module 1 with the next PySpark lesson.
+
+
+
+
+
+---
 ## 12. Course Project
 
 ### Building an Orchestrated Batch Lakehouse Pipeline
@@ -686,6 +829,8 @@ MinIO / Apache Iceberg
 | 27.10.2026 | PowerShell configuration scripts | Completed | Java and PySpark configuration prepared |
 | 27.10.2026 | SparkSession verification | Completed | Spark initialized successfully |
 | 27.10.2026 | DataFrame processing test | Completed | Test DataFrame displayed |
+| 27.10.2026 | Read CSV, JSON, and Parquet with PySpark | Completed | 6 columns and 5 records in each format; Parquet created with PyArrow |
+| 27.10.2026 | Spark Parquet write on Windows | Open issue | Missing Hadoop Windows utilities; PyArrow workaround documented in Section 11.5 |
 | 27.10.2026 | Module 1 — Distributed Processing with PySpark | In Progress | Environment ready |
 | — | Module 2 — Transformation Engineering with dbt | Not Started | — |
 | — | Module 3 — Orchestration and Lakehouse Foundations | Not Started | — |
@@ -709,6 +854,8 @@ The local development environment has been successfully configured.
 - PowerShell configuration scripts.
 - Successful SparkSession initialization.
 - Successful DataFrame processing and verification.
+- Successful reading and comparison of CSV, JSON, and Parquet with PySpark (5 records each).
+- PyArrow-based Parquet generation documented as a workaround for the unresolved Windows Spark-write issue.
 
 **Next Step:** Continue Module 1 — Distributed Processing with PySpark.
 
