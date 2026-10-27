@@ -1,0 +1,22 @@
+﻿#pip install -r requirements.txt
+#pip list
+#git version 2.55.0.windows.5
+
+# Course 2 — Lakehouse Data Pipelines with Spark and dbt
+# Python 3.12.10 / Java 17
+
+# Official installer:
+# https://www.python.org/downloads/release/python-31210/
+# https://adoptium.net/temurin/releases/?version=17
+
+# Installation:
+# python -m pip install -r requirements.txt
+
+# Course 2 — Lakehouse Data Pipelines with Spark and dbt
+# Python 3.12.10 / Java 17
+
+# Module 1 — Distributed Processing with PySpark
+pyspark==4.2.0
+pandas
+pyarrow
+

@@ -1,0 +1,31 @@
+﻿# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+Thumbs.db
+.DS_Store
+
+
+# Generated data
+/output/
+/data/tmp/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# dbt
+target/
+dbt_packages/
+logs/
