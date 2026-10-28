@@ -775,8 +775,34 @@ df_parquet = spark.read.parquet("data/sample.parquet")
 
 **Verified result:** CSV, JSON, and Parquet were read successfully through PySpark; each DataFrame contained 6 columns and 5 records. The Parquet input was generated with Pandas/PyArrow because Spark's Parquet writer was blocked by the Windows Hadoop utilities configuration (see Section 11.5).
 
-**Next Step:** Continue Module 1 with the next PySpark lesson.
+### Run the PySpark transformation script
 
+Run the script from the project root directory.
+
+Using Python:
+
+```powershell
+python .\scripts\py\transform_dataframe.py
+```
+
+Using Spark Submit:
+
+```powershell
+spark-submit .\scripts\py\transform_dataframe.py
+```
+
+The script performs the following processing flow:
+
+```text
+df → selected_df → cleaned_df → active_df → derived_df → summary_df
+```
+
+It reads the source CSV file, selects the required columns, cleans and standardizes the data, filters active records, creates the `total_value` derived column, and aggregates the results by category.
+
+
+```text
+SOURCE DATA → SELECTED COLUMNS → CLEANED DATA → FILTERED ACTIVE RECORDS → DERIVED COLUMN → CATEGORY AGGREGATION
+```
 
 
 

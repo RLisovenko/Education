@@ -1,0 +1,9 @@
+record_id,source_system,category,quantity,amount,status
+1,CRM, customer ,12,1500.50,active
+2,ERP,Inventory,8,2400.00,ACTIVE
+3,API,Orders,0,3200.75,pending
+4,CRM,Customer,10,,active
+5,ERP, inventory ,20,4100.00,ACTIVE
+6,API,Orders,15,2800.00,inactive
+7,CRM,Customer,-2,1750.00,active
+8,ERP,Inventory,6,2200.00,pending
