@@ -804,7 +804,29 @@ It reads the source CSV file, selects the required columns, cleans and standardi
 SOURCE DATA → SELECTED COLUMNS → CLEANED DATA → FILTERED ACTIVE RECORDS → DERIVED COLUMN → CATEGORY AGGREGATION
 ```
 
+### Analysing Data with Spark SQL
 
+SparkSession
+   ↓
+operations.csv + systems.csv
+   ↓
+Temp Views: operations / systems
+   ↓
+ACTIVE RECORDS
+   ↓
+CATEGORY METRICS
+   ↓
+SYSTEM OWNERSHIP JOIN
+   ↓
+SYSTEM-LEVEL METRICS
+   ↓
+OVERALL METRICS
+   ↓
+spark.stop()
+
+```
+python .\scripts\spark_sql_analysis.py
+```
 
 
 ---

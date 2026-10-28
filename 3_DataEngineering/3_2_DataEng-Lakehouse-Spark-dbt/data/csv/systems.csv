@@ -1,0 +1,4 @@
+source_system,system_name,owner_team
+CRM,Customer Relationship Platform,Customer Operations
+ERP,Enterprise Resource Planning,Supply Operations
+API,Order Integration API,Platform Engineering
