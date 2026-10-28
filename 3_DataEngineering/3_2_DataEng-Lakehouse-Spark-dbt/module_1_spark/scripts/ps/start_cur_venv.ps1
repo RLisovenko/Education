@@ -12,15 +12,38 @@
 # Project paths
 # -----------------------------
 # -------------------- $ProjectDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-Write-Host '1. Scripts are in <Project>\scripts\ps'
-Write-Host '2. Scripts are in <Project>\scripts'
+Write-Host ''
+Write-Host 'Select project directory level:'
+Write-Host '1. One level above script directory'
+Write-Host '2. Two levels above script directory'
+Write-Host '3. Three levels above script directory'
+Write-Host ''
 
-$Choice = Read-Host 'Select location (1 or 2)'
+$Choice = Read-Host 'Select level (1, 2 or 3)'
 
 $ProjectDir = switch ($Choice) {
-    '1' { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
-    '2' { Split-Path -Parent $PSScriptRoot }
-    default { throw 'Invalid selection. Enter 1 or 2.' }
+
+    '1' {
+        Split-Path -Parent $PSScriptRoot
+    }
+
+    '2' {
+        Split-Path -Parent (
+            Split-Path -Parent $PSScriptRoot
+        )
+    }
+
+    '3' {
+        Split-Path -Parent (
+            Split-Path -Parent (
+                Split-Path -Parent $PSScriptRoot
+            )
+        )
+    }
+
+    default {
+        throw 'Invalid selection. Enter 1, 2 or 3.'
+    }
 }
 # ----------------------------------------------------------------
 $VenvPath = Join-Path $ProjectDir '.venv'
@@ -53,7 +76,7 @@ if (Test-Path $VenvPython) {
 
     Write-Host ""
     Write-Host "Virtual environment activated."
-    exit
+    return
 }
 
 # -----------------------------
