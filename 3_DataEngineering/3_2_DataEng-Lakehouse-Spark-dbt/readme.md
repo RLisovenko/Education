@@ -828,6 +828,29 @@ spark.stop()
 python .\scripts\spark_sql_analysis.py
 ```
 
+### Partitions, Shuffles, and Execution Plans
+
+как Spark реально выполняет работу внутри:
+- partitions — как данные разбиваются на части;
+- shuffle — когда Spark перераспределяет данные между partitions/executors;
+- execution plan — как Spark планирует выполнение запроса;
+- explain() — как посмотреть план выполнения;
+- влияние groupBy, join, orderBy на shuffle.
+
+```text
+scripts/partitions_execution_plan.py
+```
+
+Spark performance therefore depends on balancing:
+
+- Recomputation cost ↔ Storage cost ↔ Frequency of reuse
+
+- This makes caching a deliberate optimization decision rather than a default step for every DataFrame.
+
+#### Conclusion
+Spark may recompute intermediate data when the same transformations are required by multiple actions. Caching and persistence help reduce this repeated work by retaining selected results for reuse.
+
+Used selectively, these techniques can improve processing efficiency. Effective Spark engineering therefore involves identifying reusable datasets, evaluating the cost of recomputation, and balancing performance improvements against available storage resources.
 
 ---
 ## 12. Course Project
