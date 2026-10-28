@@ -9,7 +9,7 @@
 # ------------------------------------------------------------
 
 # Resolve the project root relative to this script.
-$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 
 # Locate the Python executable in the project's virtual environment.
 $pythonExe = Join-Path $projectRoot ".venv\Scripts\python.exe"
