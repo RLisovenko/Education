@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: dim_source_system
+    description: "Dimension model containing one row per source system with its descriptive owner team."
+
+    columns:
+      - name: source_system
+        description: "Unique identifier for the originating operational system."
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['API', 'CRM', 'ERP']
+
+      - name: owner_team
+        description: "Team responsible for the source system."
+        data_tests:
+          - not_null
+
+  - name: fct_operations
+    description: "Fact model containing one row per operational record with measurable values and activity status."
+
+    columns:
+      - name: record_id
+        description: "Unique identifier for each operational record."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: source_system
+        description: "Source system associated with the operational record."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_source_system')
+                field: source_system
+
+      - name: category
+        description: "Standardized operational category."
+        data_tests:
+          - not_null
+
+      - name: quantity
+        description: "Standardized quantity associated with the record."
+        data_tests:
+          - not_null
+
+      - name: amount
+        description: "Monetary amount associated with the record."
+        data_tests:
+          - not_null
+
+      - name: total_value
+        description: "Calculated value derived from quantity multiplied by amount."
+        data_tests:
+          - not_null
+
+      - name: is_active
+        description: "Boolean indicator showing whether the operational record is active."
+        data_tests:
+          - not_null

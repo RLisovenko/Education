@@ -161,3 +161,269 @@ The dbt debug output confirms that the project is configured correctly: the dbt 
 The local dbt environment is now ready for transformation development.
 
 In this setup, dbt Core and the PostgreSQL adapter were installed, a dbt project was created, and the PostgreSQL connection profile was configured.
+
+#### Building Staging and Intermediate Models
+
+```
+\q
+dbt debug
+```
+```
+psql -U postgres -d postgres
+\c dbt_m2
+```
+
+```sql
+CREATE SCHEMA IF NOT EXISTS raw;
+CREATE SCHEMA
+```
+```
+\dn
+```
+
+```sql
+CREATE TABLE raw.operations_raw (
+    record_id INTEGER,
+    source_system VARCHAR(50),
+    category VARCHAR(100),
+    quantity INTEGER,
+    amount NUMERIC(10,2),
+    status VARCHAR(50)
+);
+```
+
+```
+\d raw.operations_raw
+```
+
+```sql
+INSERT INTO raw.operations_raw VALUES
+(1, 'CRM', ' customer ', 12, 1500.50, 'active'),
+(2, 'ERP', 'Inventory', 8, 2400.00, 'ACTIVE'),
+(3, 'API', 'Orders', 15, 3200.75, 'pending'),
+(4, 'CRM', 'Customer', 10, NULL, 'active'),
+(5, 'ERP', ' inventory ', 20, 4100.00, 'ACTIVE'),
+(6, 'API', 'Orders', 5, 2800.00, 'inactive'),
+(7, 'CRM', 'Customer', 7, 1750.00, 'active'),
+(8, 'ERP', 'Inventory', 6, 2200.00, 'pending');
+
+```
+
+```sql
+SELECT * FROM raw.operations_raw;
+```
+
+#### Create 
+- sources.yml
+```
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: operations_raw
+```
+- stg_operations.sql
+```sql
+select
+    record_id,
+    upper(trim(source_system)) as source_system,
+    initcap(trim(category)) as category,
+    case
+        when quantity <= 0 then 1
+        else quantity
+    end as quantity,
+    coalesce(amount, 0) as amount,
+    upper(trim(status)) as status
+from {{ source('raw', 'operations_raw') }}
+``` 
+- int_operations_enriched.sql
+```sql
+select
+    record_id,
+    source_system,
+    category,
+    quantity,
+    amount,
+    status,
+    quantity * amount as total_value
+from {{ ref('stg_operations') }}
+```
+- dbt_project.yml
+```text
+name: 'transformation_project'
+version: '1.0.0'
+config-version: 2
+
+profile: 'transformation_project'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  transformation_project:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+
+```
+- run Dbt without psql and Education\3_DataEngineering\3_2_DataEng-Lakehouse-Spark-dbt> 
+```
+dbt run --project-dir .\module_2_dbt\transformation_project
+```
+```
+cd module_2_dbt\transformation_project
+dbt run
+dbt ls
+```
+```
+psql -U postgres -d dbt_m2
+```
+
+```sql
+SELECT *
+FROM analytics.stg_operations
+ORDER BY record_id;
+
+SELECT *
+FROM analytics.int_operations_enriched
+ORDER BY record_id;
+```
+### 2.5 Building Staging and Intermediate Models
+
+- measurement model: Cr models\marts\dim_source_system.sql 
+```sql
+select distinct
+    source_system,
+    case
+        when source_system = 'CRM' then 'Customer Operations'
+        when source_system = 'ERP' then 'Supply Operations'
+        when source_system = 'API' then 'Platform Engineering'
+        else 'Unknown'
+    end as owner_team
+from {{ ref('int_operations_enriched') }}
+```
+- fact model: `fct_operations.sql` creates a fact model from the enriched intermediate operations data. It exposes the main operational measures and attributes, including quantity, amount, status, and calculated total value, for analytical use.
+
+```SQL
+select
+    record_id,
+    source_system,
+    category,
+    quantity,
+    amount,
+    status,
+    total_value
+from {{ ref('int_operations_enriched') }}
+```
+- dbt run
+- dbt ls 
+-  psql -U postgres -d dbt_m2
+
+```sql
+SELECT *
+FROM analytics.dim_source_system
+ORDER BY source_system;
+```
+
+```sql
+SELECT *
+FROM analytics.fct_operations
+ORDER BY record_id;
+```
+### 2.6 Building Fact and Dimension Models
+
+```
+\q
+```
+```text
+dbt debug
+
+```
+
+- CR Schema.yml
+```text
+dbt test
+
+```
+psql -U postgres -d dbt_m2
+
+```sql
+INSERT INTO analytics.fct_operations
+(
+    record_id,
+    source_system,
+    category,
+    quantity,
+    amount,
+    total_value,
+    is_active
+)
+VALUES
+(
+    999,
+    'LEGACY',
+    'Orders',
+    2,
+    1000.00,
+    2000.00,
+    true
+);
+```
+```sql
+select * 
+from analytics.fct_operations
+where record_id = 999;
+```
+\q
+тест связи должен завершиться неудачей, поскольку  у legacy нет соответствующей записи в dim  underscore source underscore system.
+dbt test --select fct_operations
+psql -U postgres -d dbt_m2
+
+```sql
+delete from analytics.fct_operations 
+where record_id = 999;
+
+select * 
+from analytics.fct_operations
+where record_id = 999;
+```
+\q
+dbt test 
+
+
+- CR docs
+dbt docs generate
+dbt docs serve
+
+```text
+dbt docs generate
+        ↓
+создаются catalog.json / manifest.json
+        ↓
+dbt docs serve
+        ↓
+запускается локальный сайт
+        ↓
+браузер открывает документацию dbt
+```
+
+```sql
+SELECT *
+FROM analytics.fct_operations
+WHERE source_system NOT IN (
+    SELECT source_system
+    FROM analytics.dim_source_system
+);
+```
