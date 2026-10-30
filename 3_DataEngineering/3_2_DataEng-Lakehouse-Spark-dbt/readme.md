@@ -28,3 +28,5 @@ See: [module_2_dbt/README.md](module_2_dbt/README.md)
 │
 └── module_2_dbt/
     └── README.md
+└── module_3_DataPipelines/
+    └── README.md    
