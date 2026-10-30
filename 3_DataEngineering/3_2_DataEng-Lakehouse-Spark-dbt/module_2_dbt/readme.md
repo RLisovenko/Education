@@ -3,7 +3,7 @@
 ## Module 2 — Transformation Engineering with dbt
 
 **Executor:** R. Lisovenko  
-**Date:** 28.10.2026
+**Date:** 28.10.2026- 30.10.2026
 
 This module focuses on transformation engineering with **dbt Core** and **PostgreSQL**.  
 The practical workflow covers source preparation, layered dbt models, materialization, data quality tests, generated documentation, and lineage.
