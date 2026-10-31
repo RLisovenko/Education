@@ -1,0 +1,78 @@
+# Local learning environment: Spark + Apache Iceberg REST Catalog + MinIO
+# Based on the Apache Iceberg / Databricks Spark quickstart topology.
+# Credentials below are for local development only.
+services:
+  spark-iceberg:
+    image: tabulario/spark-iceberg
+    container_name: spark-iceberg
+    depends_on:
+      - rest
+      - minio
+    networks:
+      - iceberg_net
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse
+      - ./notebooks:/home/iceberg/notebooks/notebooks
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+    ports:
+      - "127.0.0.1:8888:8888"   # Jupyter Notebook
+      - "127.0.0.1:8081:8080"   # Spark UI; avoids Airflow's host port 8080
+      - "127.0.0.1:10000:10000"
+      - "127.0.0.1:10001:10001"
+
+  rest:
+    image: apache/iceberg-rest-fixture
+    container_name: iceberg-rest
+    networks:
+      - iceberg_net
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+    ports:
+      - "127.0.0.1:8181:8181"
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    networks:
+      iceberg_net:
+        aliases:
+          - warehouse.minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      MINIO_DOMAIN: minio
+    volumes:
+      - ./minio-data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  mc:
+    image: cgr.dev/chainguard/minio-client:latest-dev
+    container_name: iceberg-minio-setup
+    depends_on:
+      - minio
+    networks:
+      - iceberg_net
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 admin password; do
+          echo "Waiting for MinIO..."
+          sleep 2
+        done
+        mc mb --ignore-existing local/warehouse
+        echo "MinIO warehouse bucket is ready."
+
+networks:
+  iceberg_net:
