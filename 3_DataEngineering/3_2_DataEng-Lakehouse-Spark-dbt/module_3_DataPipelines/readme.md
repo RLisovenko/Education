@@ -154,20 +154,17 @@ Frequently updated tables may require more regular maintenance.
 - **Iceberg metadata:** Tracks data files, schemas, and table snapshots.
 - **Reliable maintenance:** Optimizes physical storage while maintaining logical data consistency.
 
-### Running Apache Airflow with Docker Compose
+## Running Apache Airflow with Docker Compose
 
+The Airflow practice environment is maintained in `module_3_DataPipelines/m3_1_Airflow with Docker Compose/`. It includes the Docker Compose configuration, the `retail_operations_batch` DAG, source CSV data, and generated output. Installation, execution, and troubleshooting steps are documented in the lab-specific `readme.md`.
 
-
-
-## -----------Project Structure
+## Project Structure
 
 ```text
 3_2_DataEng-Lakehouse-Spark-dbt/
-│
-├── .venv/
+├── .venv/                                  # Local Python environment
 ├── .gitignore
 ├── README.md
-│
 ├── module_1_spark/
 │   ├── arch/
 │   ├── data/
@@ -176,8 +173,27 @@ Frequently updated tables may require more regular maintenance.
 │   ├── scripts/
 │   ├── requirements.txt
 │   └── README.md
-│
-└── module_2_dbt/
-    └── README.md
+├── module_2_dbt/
+│   └── README.md
 └── module_3_DataPipelines/
-    └── README.md    
+    ├── docs/                               # Module documentation
+    ├── m3_1_Airflow with Docker Compose/
+    │   ├── config/                         # Airflow configuration
+    │   ├── dags/
+    │   │   └── retail_operations_batch.py  # Batch workflow definition
+    │   ├── data/
+    │   │   └── operations_raw.csv          # Input dataset
+    │   ├── logs/                           # Airflow task logs
+    │   ├── output/
+    │   │   └── operations_processed.csv    # Generated output
+    │   ├── plugins/
+    │   ├── scripts/
+    │   ├── .env                            # Local environment variables
+    │   ├── docker-compose.yaml            # Container configuration
+    │   └── readme.md                      # Lab instructions
+    ├── scripts/                            # Module utility scripts
+    ├── .gitignore
+    └── readme.md                           # Module 3 notes
+```
+
+The `logs/` directory and `operations_processed.csv` are generated during execution. Local `.env` settings and runtime files should be excluded from version control where appropriate.
