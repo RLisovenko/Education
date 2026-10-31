@@ -5,11 +5,161 @@
 **Executor:** R. Lisovenko  
 **Date:** 30.10.2026
 
+## Backfills, Catchup, and Historical Reprocessing in Apache Airflow
+
+### Introduction
+
+Apache Airflow supports historical data processing when scheduled workflows are paused, fail, or need to process earlier datasets.
+
+Three important concepts are **Catchup**, **Backfill**, and **Retries**. Each serves a different purpose in workflow scheduling and recovery.
+
+### 1. Catchup
+
+**Catchup** automatically creates DAG runs for missed scheduling intervals between the DAG's `start_date` and the current schedule.
+
+- `catchup=True` — processes missed scheduled intervals.
+- `catchup=False` — does not automatically create historical runs.
+
+**Example:** A daily DAG starts on Monday but is activated on Thursday. With catchup enabled, Airflow can create runs for previously missed intervals.
+
+**Use case:** Automatically processing historical periods when every scheduled interval is required.
+
+### 2. Backfill
+
+**Backfill** allows data engineers to deliberately execute DAG runs for a specified historical date range.
+
+Common use cases:
+
+- Loading historical datasets.
+- Recovering missed pipeline executions.
+- Rebuilding data after transformation changes.
+- Regenerating analytical reports.
+
+**Example:** A pipeline failed for five days. A backfill can process those historical intervals without waiting for normal scheduling.
+
+**Important:** Backfills may increase database load, API usage, and compute costs.
+
+### 3. Historical Reprocessing
+
+Reprocessing historical data requires careful handling to prevent duplicate records and inconsistent results.
+
+Key principles:
+
+- **Idempotency:** Repeated execution should not produce duplicate or incorrect results.
+- **Deterministic processing:** The same input and interval should produce consistent outputs.
+- **Time boundaries:** Each DAG run should process its assigned data interval.
+- **Safe writes:** Use appropriate strategies such as `UPSERT`, `MERGE`, or partition replacement.
+
+### 4. Catchup vs. Backfill vs. Retries
+
+| Concept | Purpose |
+|---|---|
+| **Catchup** | Automatically creates missed scheduled DAG runs. |
+| **Backfill** | Deliberately processes selected historical intervals. |
+| **Retries** | Re-executes failed tasks within an existing DAG run. |
+
+### Key Takeaways
+
+- Use **Catchup** when missed scheduled intervals should be processed automatically.
+- Use **Backfill** for controlled historical data processing.
+- Use **Retries** to recover from temporary task failures.
+- Design historical pipelines to be **idempotent, deterministic, and safe to rerun**.
+
+Understanding these mechanisms helps maintain reliable and consistent data pipelines in Apache Airflow.
+
+## Small-File Problem, Compaction, and Metadata in Apache Iceberg
+
+### Introduction
+
+Data lakes commonly store large datasets in columnar formats such as **Apache Parquet**. Frequent batch and streaming writes can generate thousands of small files, increasing metadata overhead and reducing query performance.
+
+**Compaction** helps optimize storage by combining small files into fewer, larger files without changing the logical content of the dataset.
+
+### 1. The Small-File Problem
+
+Frequent data writes can create many undersized files, resulting in:
+
+- Increased file discovery and metadata overhead.
+- Slower query planning and execution.
+- Inefficient resource utilization.
+- Additional file-opening and processing costs.
+
+**Example:** Processing 5 GB of data stored in 10 appropriately sized files is generally more efficient than processing the same data distributed across thousands of tiny files.
+
+### 2. Compaction
+
+**Compaction** reorganizes existing data files into a more efficient physical layout.
+
+Key benefits:
+
+- Reduces the number of small files.
+- Improves scan efficiency and query performance.
+- Reduces file-management overhead.
+- Optimizes distributed processing.
+
+**Important:** Compaction changes the physical storage layout, not the business logic or logical dataset.
+
+### 3. Balanced File Sizing
+
+File size affects processing efficiency:
+
+| File Size | Impact |
+|---|---|
+| Too small | High metadata overhead and excessive file operations |
+| Too large | Reduced parallelism and potentially inefficient processing |
+| Balanced | Efficient scans and better parallel execution |
+
+Optimal file sizes depend on the processing engine, workload, and infrastructure.
+
+### 4. Apache Iceberg Metadata
+
+**Apache Iceberg** uses metadata to manage the logical structure and version history of lakehouse tables.
+
+Metadata tracks:
+
+- **Data files:** Which files belong to the table.
+- **Schemas:** Column definitions and data types.
+- **Table snapshots:** Versions of the table representing committed changes.
+
+This enables:
+
+- Schema evolution.
+- Snapshot-based version management.
+- Time Travel to previous table states.
+- Consistent table updates.
+
+**Key distinction:**
+
+- **Metadata** manages which data files belong to a table and how they are organized logically.
+- **Compaction** optimizes how those data files are physically stored.
+
+When Iceberg compacts data files, it commits updated metadata referencing the rewritten files while preserving the table's logical contents.
+
+### 5. Operational Considerations
+
+Compaction consumes compute and I/O resources, so its scheduling should consider:
+
+- Frequency of data ingestion.
+- Number and size distribution of files.
+- Query performance requirements.
+- Storage and processing costs.
+
+Frequently updated tables may require more regular maintenance.
+
+### Key Takeaways
+
+- **Small-file problem:** Too many small files increase overhead and reduce efficiency.
+- **Compaction:** Combines small files into larger, more efficient files.
+- **Balanced sizing:** Improves scanning and distributed processing.
+- **Iceberg metadata:** Tracks data files, schemas, and table snapshots.
+- **Reliable maintenance:** Optimizes physical storage while maintaining logical data consistency.
+
+### Running Apache Airflow with Docker Compose
 
 
 
 
-## Project Structure
+## -----------Project Structure
 
 ```text
 3_2_DataEng-Lakehouse-Spark-dbt/
