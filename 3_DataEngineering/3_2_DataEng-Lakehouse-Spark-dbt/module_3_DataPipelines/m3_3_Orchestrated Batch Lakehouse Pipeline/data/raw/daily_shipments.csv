@@ -1,0 +1,9 @@
+shipment_id,distribution_center,destination,package_count,shipping_cost,shipment_status,shipment_date
+SHP001,north hub,Chennai,12,2400.00,in_transit,2026-08-31
+SHP002,SOUTH HUB,Bengaluru,8,1600.00,DELIVERED,2026-08-31
+SHP003,east hub,Hyderabad,15,3000.00,pending,2026-08-31
+SHP004,North Hub,Mumbai,10,,in_transit,2026-08-31
+SHP005, west hub ,Pune,20,5000.00,DELIVERED,2026-08-31
+SHP006,SOUTH HUB,Kochi,5,1250.00,cancelled,2026-08-31
+SHP007,north hub,Delhi,7,1750.00,in_transit,2026-08-31
+SHP008,EAST HUB,Kolkata,6,1500.00,pending,2026-08-31

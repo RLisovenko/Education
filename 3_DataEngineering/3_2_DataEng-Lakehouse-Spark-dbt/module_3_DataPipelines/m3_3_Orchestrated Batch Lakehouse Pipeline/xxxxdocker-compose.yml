@@ -1,0 +1,106 @@
+
+# Module 3.3 — Orchestrated Batch Lakehouse Pipeline
+#**Course:** Lakehouse Data Pipelines with Spark and dbt  
+#**Module:** 3.3 — Data Pipelines  
+#**Executor:** R. Lisovenko  
+#**Date:** 01 November 2026
+# Local development environment
+
+name: lakehouse-m3-3
+
+services:
+
+  airflow:
+    image: apache/airflow:3.1.7
+    command: standalone
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    volumes:
+      - airflow-home:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+      - ./spark:/opt/airflow/spark
+    ports:
+      - "127.0.0.1:8083:8080"
+    networks:
+      - lakehouse_net
+    restart: unless-stopped
+
+  spark-iceberg:
+    image: tabulario/spark-iceberg
+    depends_on:
+      - rest
+      - minio
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+    volumes:
+      - ./spark:/home/iceberg/jobs
+      - ./data:/home/iceberg/data
+    ports:
+      - "127.0.0.1:8889:8888"
+      - "127.0.0.1:8082:8080"
+    networks:
+      - lakehouse_net
+    restart: unless-stopped
+
+  rest:
+    image: apache/iceberg-rest-fixture
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+    ports:
+      - "127.0.0.1:8182:8181"
+    networks:
+      - lakehouse_net
+    restart: unless-stopped
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      MINIO_DOMAIN: minio
+    volumes:
+      - minio-data:/data
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+    networks:
+      lakehouse_net:
+        aliases:
+          - warehouse.minio
+    restart: unless-stopped
+
+  mc:
+    image: cgr.dev/chainguard/minio-client:latest-dev
+    depends_on:
+      - minio
+    networks:
+      - lakehouse_net
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 admin password; do
+          echo "Waiting for MinIO..."
+          sleep 2
+        done
+        mc mb --ignore-existing local/warehouse
+        echo "MinIO warehouse bucket is ready."
+
+networks:
+  lakehouse_net:
+
+volumes:
+  airflow-home:
+  minio-data:

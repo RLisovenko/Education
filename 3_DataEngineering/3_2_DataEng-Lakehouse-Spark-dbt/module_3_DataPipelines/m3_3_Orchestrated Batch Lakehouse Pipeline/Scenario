@@ -1,0 +1,13 @@
+# Business Scenario — Logistics Batch Lakehouse Pipeline
+
+A logistics company receives daily shipment data from multiple distribution centers.
+
+The raw data may contain inconsistent names, mixed status formats, and missing shipping costs.
+
+The pipeline uses **Apache Airflow** to orchestrate the workflow, **Apache Spark** to clean and transform the data, **Apache Iceberg** to manage the table, and **MinIO** to store it.
+
+
+**Course:** Lakehouse Data Pipelines with Spark and dbt  
+**Module:** 3.3 — Data Pipelines  
+**Executor:** R. Lisovenko  
+**Date:** 01 November 2026
