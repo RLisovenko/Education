@@ -45,6 +45,24 @@ module_3_DataPipelines/
 ```
 
 > Runtime folders and files appear after the corresponding lab is executed. The new Iceberg lab uses a separate Compose file and must be started from its own directory.
+## Local Development Services
+
+The Module 3 laboratories use Docker Compose to run
+Apache Airflow, Apache Spark, Apache Iceberg, and MinIO.
+
+| Service | Local URL | Purpose |
+|---|---|---|
+| Apache Airflow | http://localhost:8080 | Workflow orchestration |
+| MinIO Console | http://localhost:9001 | Object storage management |
+| Iceberg REST Catalog | http://localhost:8181 | Iceberg table catalog |
+| Spark Web UI | http://localhost:8081 | Spark application monitoring |
+| Jupyter Notebook | http://localhost:8888 | Interactive Spark development |
+
+Services are available only when their respective
+Docker Compose environments are running.
+
+Each laboratory provides its own configuration,
+startup commands, and troubleshooting instructions.
 
 ## Technical notes
 
