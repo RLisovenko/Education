@@ -818,3 +818,6 @@ docker compose up -d
 - Snapshot/update, schema evolution and compaction scripts are optional exercises and still require execution and evidence.
 
 **Project deliverable:** An independent, documented training implementation of a manufacturing analytics lakehouse with supplied sources, PySpark processing, dbt models/tests, an Airflow DAG, PostgreSQL, MinIO and Iceberg, ready for local validation.
+
+docker compose stop
+
