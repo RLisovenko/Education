@@ -1,0 +1,58 @@
+version: 2
+models:
+  - name: fact_production
+    description: "Production order-level fact; source for Iceberg manufacturing_production_metrics."
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: facility_id
+        data_tests:
+          - relationships:
+              to: ref('dim_facility')
+              field: facility_id
+      - name: product_id
+        data_tests:
+          - relationships:
+              to: ref('dim_product')
+              field: product_id
+      - name: production_status
+        data_tests:
+          - accepted_values:
+              values: ['COMPLETED', 'IN_PROGRESS']
+  - name: fact_quality_inspections
+    description: "Quality analysis with a single row per inspection."
+    columns:
+      - name: inspection_id
+        data_tests: [unique, not_null]
+  - name: fact_machine_operations
+    description: "Machine utilization facts; grain = operation_id."
+    columns:
+      - name: operation_id
+        data_tests: [unique, not_null]
+  - name: dim_facility
+    columns:
+      - name: facility_id
+        data_tests: [unique, not_null]
+  - name: dim_production_line
+    columns:
+      - name: line_id
+        data_tests: [unique, not_null]
+  - name: dim_machine
+    columns:
+      - name: machine_id
+        data_tests: [unique, not_null]
+  - name: dim_product
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+  - name: dim_date
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+  - name: mart_production_daily
+    description: "Facility-level daily manufacturing reporting."
+    columns:
+      - name: facility_id
+        data_tests: [not_null]
+      - name: production_date
+        data_tests: [not_null]

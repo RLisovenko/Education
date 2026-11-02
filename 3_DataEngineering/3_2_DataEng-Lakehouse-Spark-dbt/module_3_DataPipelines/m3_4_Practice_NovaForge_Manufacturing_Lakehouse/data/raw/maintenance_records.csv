@@ -1,0 +1,4 @@
+maintenance_id,machine_id,maintenance_date,downtime_minutes,maintenance_type
+MN01,M01,2026-10-30,25,Preventive
+MN02,M03,2026-10-31,45,Repair
+MN03,M04,2026-10-31,15,Preventive

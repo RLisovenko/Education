@@ -1,0 +1,5 @@
+machine_id,line_id,machine_type
+M01,L01,CNC
+M02,L02,Welding
+M03,L03,Press
+M04,L04,Finishing

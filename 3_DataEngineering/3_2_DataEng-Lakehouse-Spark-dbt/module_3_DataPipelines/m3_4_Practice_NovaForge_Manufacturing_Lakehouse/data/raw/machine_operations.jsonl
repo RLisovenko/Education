@@ -1,0 +1,12 @@
+{"operation_id": "OP001", "order_id": "O001", "machine_id": "M01", "operation_at": "2026-10-30T09:15:00", "run_minutes": 64, "downtime_minutes": 5, "energy_consumption_kwh": 42.3}
+{"operation_id": "OP002", "order_id": "O002", "machine_id": "M02", "operation_at": "2026-10-30T10:15:00", "run_minutes": 68, "downtime_minutes": 10, "energy_consumption_kwh": 44.6}
+{"operation_id": "OP003", "order_id": "O003", "machine_id": "M03", "operation_at": "2026-10-30T11:15:00", "run_minutes": 72, "downtime_minutes": 15, "energy_consumption_kwh": 46.9}
+{"operation_id": "OP004", "order_id": "O004", "machine_id": "M04", "operation_at": "2026-10-30T12:15:00", "run_minutes": 76, "downtime_minutes": 0, "energy_consumption_kwh": 49.2}
+{"operation_id": "OP005", "order_id": "O005", "machine_id": "M01", "operation_at": "2026-10-30T13:15:00", "run_minutes": 80, "downtime_minutes": 5, "energy_consumption_kwh": 51.5}
+{"operation_id": "OP006", "order_id": "O006", "machine_id": "M02", "operation_at": "2026-10-30T14:15:00", "run_minutes": 84, "downtime_minutes": 10, "energy_consumption_kwh": 53.8}
+{"operation_id": "OP007", "order_id": "O007", "machine_id": "M03", "operation_at": "2026-10-31T15:15:00", "run_minutes": 88, "downtime_minutes": 15, "energy_consumption_kwh": 56.1}
+{"operation_id": "OP008", "order_id": "O008", "machine_id": "M04", "operation_at": "2026-10-31T08:15:00", "run_minutes": 92, "downtime_minutes": 0, "energy_consumption_kwh": 58.4}
+{"operation_id": "OP009", "order_id": "O009", "machine_id": "M01", "operation_at": "2026-10-31T09:15:00", "run_minutes": 96, "downtime_minutes": 5, "energy_consumption_kwh": 60.7}
+{"operation_id": "OP010", "order_id": "O010", "machine_id": "M02", "operation_at": "2026-10-31T10:15:00", "run_minutes": 100, "downtime_minutes": 10, "energy_consumption_kwh": 63.0}
+{"operation_id": "OP011", "order_id": "O011", "machine_id": "M03", "operation_at": "2026-10-31T11:15:00", "run_minutes": 104, "downtime_minutes": 15, "energy_consumption_kwh": 65.3}
+{"operation_id": "OP012", "order_id": "O012", "machine_id": "M04", "operation_at": "2026-10-31T12:15:00", "run_minutes": 108, "downtime_minutes": 0, "energy_consumption_kwh": 67.6}

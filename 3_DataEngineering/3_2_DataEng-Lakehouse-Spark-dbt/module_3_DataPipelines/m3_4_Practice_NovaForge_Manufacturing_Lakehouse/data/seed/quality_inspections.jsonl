@@ -1,0 +1,12 @@
+{"inspection_id": "QI001", "order_id": "O001", "inspected_units": 100, "rejected_units": 1, "inspection_at": "2026-10-30T11:00:00"}
+{"inspection_id": "QI002", "order_id": "O002", "inspected_units": 105, "rejected_units": 2, "inspection_at": "2026-10-30T12:00:00"}
+{"inspection_id": "QI003", "order_id": "O003", "inspected_units": 110, "rejected_units": 3, "inspection_at": "2026-10-30T13:00:00"}
+{"inspection_id": "QI004", "order_id": "O004", "inspected_units": 115, "rejected_units": 4, "inspection_at": "2026-10-30T14:00:00"}
+{"inspection_id": "QI005", "order_id": "O005", "inspected_units": 120, "rejected_units": 0, "inspection_at": "2026-10-30T15:00:00"}
+{"inspection_id": "QI006", "order_id": "O006", "inspected_units": 125, "rejected_units": 1, "inspection_at": "2026-10-30T16:00:00"}
+{"inspection_id": "QI007", "order_id": "O007", "inspected_units": 130, "rejected_units": 2, "inspection_at": "2026-10-31T10:00:00"}
+{"inspection_id": "QI008", "order_id": "O008", "inspected_units": 135, "rejected_units": 3, "inspection_at": "2026-10-31T11:00:00"}
+{"inspection_id": "QI009", "order_id": "O009", "inspected_units": 140, "rejected_units": 4, "inspection_at": "2026-10-31T12:00:00"}
+{"inspection_id": "QI010", "order_id": "O010", "inspected_units": 145, "rejected_units": 0, "inspection_at": "2026-10-31T13:00:00"}
+{"inspection_id": "QI011", "order_id": "O011", "inspected_units": 150, "rejected_units": 1, "inspection_at": "2026-10-31T14:00:00"}
+{"inspection_id": "QI012", "order_id": "O012", "inspected_units": 155, "rejected_units": 2, "inspection_at": "2026-10-31T15:00:00"}

@@ -1,0 +1,213 @@
+name: novaforge_demo
+
+x-airflow-common: &airflow-common
+  image: novaforge-airflow:3.3.1
+  build:
+    context: .
+    dockerfile: docker/airflow.Dockerfile
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "airflow:admin"
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+    AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET}
+    AIRFLOW__API__BASE_URL: http://localhost:8084
+    PYTHONUNBUFFERED: "1"
+  volumes: &airflow-volumes
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./config:/opt/airflow/config
+    - ./data:/opt/project/data:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+  user: "${AIRFLOW_UID:-50000}:0"
+  group_add:
+    - "${DOCKER_GID:-0}"
+  depends_on: &airflow-deps
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: novaforge-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: manufacturing
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d manufacturing"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-bookworm
+    container_name: novaforge-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: novaforge-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:9004:9000"
+      - "127.0.0.1:9005:9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+  minio-init:
+    image: novaforge-dbt:1.11
+    build:
+      context: .
+      dockerfile: docker/dbt.Dockerfile
+    container_name: novaforge-minio-init
+    command: ["python", "/usr/app/tools/init_minio.py"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./tools:/usr/app/tools:ro
+    depends_on:
+      minio:
+        condition: service_started
+    restart: "no"
+
+  spark:
+    image: apache/spark:3.5.7
+    container_name: novaforge-spark
+    command: ["tail", "-f", "/dev/null"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      PG_USER: ${POSTGRES_USER}
+      PG_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_URL: jdbc:postgresql://postgres:5432/manufacturing
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data:/opt/project/data
+      - ./spark:/opt/project/spark:ro
+      - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - spark-ivy:/tmp/.ivy2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  dbt:
+    image: novaforge-dbt:1.11
+    build:
+      context: .
+      dockerfile: docker/dbt.Dockerfile
+    container_name: novaforge-dbt
+    command: ["sleep", "infinity"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./dbt:/usr/app
+    ports:
+      - "127.0.0.1:8085:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: novaforge-airflow-init
+    entrypoint: /bin/bash
+    command: ["-c", "airflow db migrate"]
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-common
+    container_name: novaforge-airflow-apiserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    command: api-server
+    ports:
+      - "127.0.0.1:8084:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: novaforge-airflow-scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-apiserver:
+        condition: service_healthy
+    command: scheduler
+    restart: unless-stopped
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: novaforge-airflow-dag-processor
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-apiserver:
+        condition: service_healthy
+    command: dag-processor
+    restart: unless-stopped
+
+  airflow-worker:
+    <<: *airflow-common
+    container_name: novaforge-airflow-worker
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-apiserver:
+        condition: service_healthy
+      spark:
+        condition: service_started
+      dbt:
+        condition: service_started
+    command: celery worker
+    restart: unless-stopped
+
+  airflow-triggerer:
+    <<: *airflow-common
+    container_name: novaforge-airflow-triggerer
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-apiserver:
+        condition: service_healthy
+    command: triggerer
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:
+  spark-ivy:

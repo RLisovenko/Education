@@ -1,0 +1,15 @@
+version: 2
+sources:
+  - name: manufacturing_raw
+    database: manufacturing
+    schema: raw
+    description: "Cleaned and schema-validated manufacturing sources loaded by PySpark."
+    tables:
+      - name: production_orders
+      - name: machine_operations
+      - name: quality_inspections
+      - name: facilities
+      - name: production_lines
+      - name: machines
+      - name: products
+      - name: maintenance_records

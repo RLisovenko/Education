@@ -1,0 +1,5 @@
+line_id,facility_id,line_name
+L01,F01,Assembly A
+L02,F01,Assembly B
+L03,F02,Machining C
+L04,F03,Finishing D

@@ -1,0 +1,69 @@
+version: 2
+models:
+  - name: stg_production_orders
+    description: "Validated production orders. Grain: one row per order_id."
+    columns:
+      - name: order_id
+        description: "Unique manufacturing production order."
+        data_tests: [not_null, unique]
+      - name: facility_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_facilities')
+              field: facility_id
+      - name: product_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+      - name: production_status
+        data_tests:
+          - accepted_values:
+              values: ['COMPLETED', 'IN_PROGRESS']
+  - name: stg_machine_operations
+    description: "Machine operation events. Grain: one row per operation_id."
+    columns:
+      - name: operation_id
+        data_tests: [unique, not_null]
+      - name: order_id
+        data_tests:
+          - relationships:
+              to: ref('stg_production_orders')
+              field: order_id
+  - name: stg_quality_inspections
+    description: "Product quality inspections. Grain: one row per inspection_id."
+    columns:
+      - name: inspection_id
+        data_tests: [unique, not_null]
+      - name: order_id
+        data_tests:
+          - relationships:
+              to: ref('stg_production_orders')
+              field: order_id
+  - name: stg_facilities
+    columns:
+      - name: facility_id
+        data_tests: [unique, not_null]
+  - name: stg_production_lines
+    columns:
+      - name: line_id
+        data_tests: [unique, not_null]
+      - name: facility_id
+        data_tests:
+          - relationships:
+              to: ref('stg_facilities')
+              field: facility_id
+  - name: stg_machines
+    columns:
+      - name: machine_id
+        data_tests: [unique, not_null]
+  - name: stg_products
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+  - name: stg_maintenance_records
+    columns:
+      - name: maintenance_id
+        data_tests: [unique, not_null]
