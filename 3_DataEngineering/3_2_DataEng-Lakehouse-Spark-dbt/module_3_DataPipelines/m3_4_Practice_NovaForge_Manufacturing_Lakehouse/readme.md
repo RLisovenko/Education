@@ -56,6 +56,170 @@ flowchart TD
     F -. orchestrates .-> V
 ```
 
+### 2.1. How the Pipeline Works — Step by Step
+
+The NovaForge Manufacturing Lakehouse demonstrates a complete data engineering workflow, from heterogeneous source files to validated analytical datasets stored in Apache Iceberg.
+
+The architecture separates **orchestration, data processing, SQL transformation, data quality validation, and lakehouse storage**. Each component has a specific responsibility.
+
+#### Step 1 — Apache Airflow: Workflow Orchestration
+
+Apache Airflow coordinates the entire data pipeline using a Directed Acyclic Graph (DAG).
+
+The `novaforge_manufacturing_lakehouse` DAG consists of seven dependent tasks. Airflow controls their execution order, monitors task status, and handles failures and retries.
+
+For example, if Spark processing fails, downstream dbt transformations must not start. This prevents incomplete source data from reaching the analytical models.
+
+The practice project uses manual DAG execution, with `catchup=False` and a limited retry policy. Automatic daily scheduling and production alerting are outside the implemented scope.
+
+#### Step 2 — Apache Spark: Source Data Processing
+
+The pipeline processes manufacturing datasets in three formats:
+
+- **CSV:** Production orders and reference data.
+- **JSONL:** Machine operations and event records.
+- **Parquet:** Quality inspection records.
+
+Before the main ingestion begins, Spark converts a JSONL quality inspection seed into a Parquet dataset.
+
+PySpark then reads the source files, validates their structure, normalizes values, and loads the processed records into PostgreSQL.
+
+This stage demonstrates how Spark can integrate heterogeneous data formats within a single ETL workflow.
+
+#### Step 3 — PostgreSQL: Structured Raw Data Storage
+
+Apache Spark writes normalized source records into the `raw` schema of the PostgreSQL `manufacturing` database.
+
+Examples include:
+
+- `raw.production_orders`
+- `raw.machine_operations`
+- `raw.quality_inspections`
+
+PostgreSQL provides a structured SQL environment for downstream transformations.
+
+At this stage, the data has been loaded and normalized but has not yet been organized into the final analytical fact and dimension models.
+
+#### Step 4 — dbt Core: Analytical Modeling and Data Quality
+
+dbt transforms the PostgreSQL source data into three analytical layers:
+
+- **Staging:** Standardizes source fields, data types, and naming conventions.
+- **Intermediate:** Combines related datasets and calculates intermediate metrics.
+- **Marts:** Produces business-ready fact tables, dimension tables, and reporting aggregates.
+
+The completed dbt project contains:
+
+| Component | Result |
+|---|---:|
+| Staging models | 8 |
+| Intermediate models | 1 |
+| Analytical mart models | 9 |
+| Total models | 18 |
+| Physical tables | 9 |
+| SQL views | 9 |
+| Data quality tests | 47 |
+| dbt build results | 65/65 PASS |
+
+Airflow executes the dbt transformations and tests as separate pipeline tasks.
+
+The Iceberg publication task proceeds only when the upstream dbt tasks have completed successfully.
+
+#### Step 5 — Spark JDBC and Apache Iceberg: Publishing Analytical Data
+
+After the dbt models pass validation, Spark connects to PostgreSQL through JDBC.
+
+It reads the analytical production fact table:
+
+`marts.fact_production`
+
+Spark then publishes the results to the Apache Iceberg table:
+
+`demo.manufacturing.manufacturing_production_metrics`
+
+The publication logic uses `MERGE` with `order_id` as the business key, allowing existing records to be updated and new records to be inserted during repeatable processing.
+
+Apache Iceberg provides transactional table operations, atomic commits, and snapshot-based versioning.
+
+These capabilities help maintain a consistent published table state during data updates.
+
+#### Step 6 — MinIO: S3-Compatible Lakehouse Storage
+
+Apache Iceberg is an open table format, not a standalone storage server.
+
+Iceberg manages table metadata, schema information, manifests, and snapshots. MinIO provides the underlying S3-compatible object storage.
+
+The NovaForge warehouse uses:
+
+`S3A: s3a://warehouse/iceberg`
+
+The published manufacturing table contains two main storage directories:
+
+- **data/** — Parquet data files containing manufacturing records.
+- **metadata/** — Iceberg metadata, manifests, and snapshot information.
+
+Iceberg and MinIO work together: Iceberg defines the transactional table structure, while MinIO stores its physical files.
+
+#### Step 7 — Spark SQL: Final Lakehouse Validation
+
+After publication, Spark SQL verifies that the Iceberg dataset is accessible and consistent with the expected results.
+
+The validation includes:
+
+1. Checking the Iceberg namespace and table existence.
+2. Querying the published records.
+3. Verifying the expected record count.
+4. Inspecting Iceberg snapshot metadata.
+
+**Verified execution results — November 2, 2026:**
+
+| Validation | Result |
+|---|---|
+| Iceberg catalog | `demo` |
+| Namespace | `manufacturing` |
+| Published table | `manufacturing_production_metrics` |
+| Published records | 12 |
+| Snapshot operation | `append` |
+| Airflow execution | 7/7 SUCCESS |
+| DAG duration | 2 minutes 58 seconds |
+| dbt build | 65/65 PASS |
+
+The results confirm the successful end-to-end execution of the manufacturing lakehouse pipeline.
+
+### 2.2. Airflow DAG — Seven Tasks and Their Responsibilities
+
+| # | Airflow Task | Responsibility |
+|---|---|---|
+| 1 | `check_source_files` | Verify that all required source files are available. |
+| 2 | `prepare_parquet_source` | Generate the quality inspection Parquet dataset from JSONL. |
+| 3 | `run_pyspark_processing` | Process and normalize source data, then load PostgreSQL. |
+| 4 | `run_dbt_transformations` | Build staging, intermediate, and mart models. |
+| 5 | `run_dbt_tests` | Validate analytical data quality. |
+| 6 | `write_iceberg_output` | Publish analytical data into Apache Iceberg using Spark. |
+| 7 | `validate_final_results` | Verify the published Iceberg table and results. |
+
+All seven tasks completed successfully during the verified pipeline execution.
+
+### 2.3. Key Architectural Principles
+
+**Separation of Responsibilities:** Airflow orchestrates, Spark processes, PostgreSQL stores relational data, dbt transforms and validates, Iceberg manages transactional tables, and MinIO provides object storage.
+
+**Dependency Management:** Downstream tasks depend on successful upstream execution. Failed processing or quality tests prevent subsequent publication.
+
+**Idempotent Publication:** Record-key-based `MERGE` supports repeatable publication without blindly appending duplicate business keys.
+
+**Transactional Consistency:** Apache Iceberg uses atomic table commits and snapshots to prevent readers from observing a partially committed table update.
+
+**Open Technology Stack:** The architecture relies on open-source and open-format technologies without requiring a proprietary cloud data platform.
+
+**Operational Scope:** The demonstrated implementation runs locally with Docker Compose and Spark `local[2]`. Production monitoring, automatic daily scheduling, high availability, and scalability testing would require additional engineering.
+
+The complete workflow provides a practical example of building a modular, testable, and maintainable analytics lakehouse.
+
+**Implemented and verified by R. Lisovenko — November 2026.**
+
+![NovaForge Architecture and Data Flow](./pic/novaforge_architecture_explained.png)
+
 **Responsibilities:** PySpark processes incoming data; PostgreSQL holds source and dbt analytical relations; dbt creates reusable staging, intermediate and marts models; Airflow controls dependencies and retries; Iceberg manages table state and snapshots; MinIO stores the underlying S3A Parquet and metadata objects.
 
 ## 3. Isolated Services, Ports and Naming
