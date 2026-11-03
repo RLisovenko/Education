@@ -4,8 +4,27 @@
 **Track:** Module 3 — Practice Project  
 **Project:** Manufacturing Analytics Lakehouse  
 **Executor:** R. Lisovenko  
-**Prepared:** 01-02 November 2026  (30 min- > 2*4h)
-**Status:** Implementation prepared; **Docker integration and end-to-end execution are pending local verification**.
+**Implementation and verification:** 1–2 November 2026 (extended hands-on work beyond the course's 30-minute reading estimate)  
+**Documentation updated:** 3 November 2026  
+**Status:** **COMPLETED — core manufacturing lakehouse project**, verified with Airflow **7/7** successful tasks, dbt **65/65** successful build operations and **12** Iceberg production rows. The Coursera practice-project reading item is marked complete.  
+**Extensions — Steps 15 and 16:** **COMPLETED (code and documentation prepared)**; standalone schema-evolution and compaction scripts **have not been executed or verified**. These optional extensions are not prerequisites for the verified core DAG.  
+**Initial project status (historical, before the first run):** “Implementation prepared; Docker integration and end-to-end execution are pending local verification.” The later results below document how this initial status changed after testing.  
+**Current local environment:** Following repeated unexpected laptop shutdowns, the NovaForge-specific Docker containers, named volumes and images were removed. Results in this README are **historical evidence from 2 November**, not claims that the stack is still running. A fresh build and data initialization would be required for new runtime tests.
+
+### Completion and evidence
+
+| Component | Status | Evidence / scope |
+|---|---|---|
+| Source preparation and Python unit tests | **Completed / verified** | Four unit tests passed; Parquet generated from quality seed |
+| Airflow orchestration and Spark processing | **Completed / verified** | DAG 7/7 SUCCESS, 2m 58s |
+| dbt transformation, data quality and documentation | **Completed / verified** | 18 models + 47 tests = 65 successful build operations; dbt Docs generated |
+| Apache Iceberg / MinIO publication | **Completed / verified** | 12 manufacturing production rows and snapshot metadata |
+| Step 14 — Spark performance analysis | **Completed / verified** | 12 operations; 1,032 runtime minutes |
+| **Step 15 — Iceberg schema evolution** | **Completed (script and documentation)** | `iceberg_operations_demo.py` prepared; execution **not verified** |
+| **Step 16 — Iceberg compaction** | **Completed (script and documentation)** | `compact_iceberg.py` prepared; execution **not verified** |
+
+> **Evidence convention:** “Completed (script and documentation)” means the exercise has been implemented and documented, **not** that a successful runtime log exists. No output, table mutation or benchmark is claimed for Steps 15–16.
+
 
 ## 1. Project Objective and Business Scenario
 
@@ -114,11 +133,12 @@ See [Architecture](docs/ARCHITECTURE.md), [Data Dictionary](docs/DATA_DICTIONARY
 ### 5.2 Prepare environment
 
 ```powershell
-# From the directory that contains docker-compose.yml:
+# Run from the directory containing docker-compose.yml:
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 docker compose config --quiet
-# Only if .env is missing:
-Copy-Item .env.example .env
 ```
+
+**Sequence matters:** Create `.env` **before** checking the Docker Compose configuration, because Compose may reference variables from that file.
 
 The included `.env` uses local demo values. Customize it before sharing the project with anyone else. Do not change Docker internal addresses (`postgres:5432`, `minio:9000`) when changing Windows host ports.
 
@@ -172,13 +192,7 @@ Airflow database migrations completed successfully:
 docker compose exec airflow-worker python -c "import docker; print(docker.from_env().ping())"
 ```
 
-
-```powershell
-docker compose exec dbt dbt debug --project-dir /usr/app --profiles-dir /usr/app
-```
-- Expected - True.
-
-If the Docker API check returns a socket permission error, see [Troubleshooting](docs/TROUBLESHOOTING.md) (Docker socket group/UID).
+**Expected Docker API result:** `True` (distinct from `dbt debug`, which should report `All checks passed`). If the Docker API check returns a socket permission error, see [Troubleshooting](docs/TROUBLESHOOTING.md) (Docker socket group/UID).
 
 
 ### Spark Container — Source Data Verification
@@ -193,23 +207,21 @@ The command successfully listed the manufacturing source files, confirming that 
 
 ![Spark Source Files Verification](./pic/novaforge_spark_source_files_verified.png)
 
+### dbt dependency troubleshooting — missing Git, then repaired
+
+The initial `dbt debug` exposed a missing `git` executable inside the dbt image (some packages rely on Git). The issue was fixed by adding Git to `docker/dbt.Dockerfile` and rebuilding **only** the dbt service:
+
 ```powershell
+# Historical fix; only rebuild dbt again if the Git executable is missing:
 docker compose exec dbt dbt debug --project-dir /usr/app --profiles-dir /usr/app
-```
-![dbt Debug — Git Dependency Missing](./pic/novaforge_dbt_debug_missing_git.png)
-- fixing the error and ...
-
-```bash
 docker compose up -d --no-deps --build dbt
-```
-After updating the dbt Dockerfile, the dbt container was rebuilt successfully using:
-
-![Rebuilding the dbt container](./pic/novaforge_dbt_rebuild_success.png)
-
-```
 docker compose exec dbt git --version
 ```
-Expect - last git version 2.47.3
+
+The final command should print the installed Git version; its exact patch number is image-dependent.
+
+![dbt Debug — Git Dependency Missing](./pic/novaforge_dbt_debug_missing_git.png)
+![Rebuilding the dbt container](./pic/novaforge_dbt_rebuild_success.png)
 
 ### dbt Debug — Successful Verification After Fix
 
@@ -279,7 +291,9 @@ The pipeline contains seven sequential tasks, including source validation, Parqu
 
 ![NovaForge Pipeline Running](./pic/novaforge_airflow_pipeline_running.png)
 
-**Execution status:** Running — final results pending.
+**Execution status (first-run checkpoint): Running — final results pending.**  
+**Next checkpoint: FAILED.** The `prepare_parquet_source` task failed because the Spark Ivy cache directories were missing. This was subsequently fixed, and a **later DAG run succeeded 7/7** (see the result below).
+
 ![Airflow Parquet Preparation — Failed](./pic/novaforge_parquet_task_failed_log.png)
 
 
@@ -339,9 +353,8 @@ docker exec novaforge-spark /opt/spark/bin/spark-submit --master "local[2]" --co
 $LASTEXITCODE
 ```
 
-An exit code of `0` will confirm successful completion of the Spark Job.
-
-**Current Status:** Directory creation and permission verification completed successfully. Spark Job execution must be verified separately.
+**Historical checkpoint after the directory fix:** Directory creation and permission verification completed successfully; Spark job execution still needed separate verification.  
+**Observed result later on 2 November 2026:** The manually retried Parquet preparation job completed with **exit code `0`**, reporting **12 quality-inspection records**. A subsequent complete Airflow run also succeeded (**7/7**).
 
 **Note:** The permission change was applied to the running container for local development. For a reproducible deployment, directory initialization and appropriate ownership should be included in the Docker configuration.
 
@@ -380,13 +393,17 @@ The successful run confirms end-to-end orchestration of source validation, Parqu
 ![NovaForge Airflow Pipeline — 7/7 Success](./pic/novaforge_airflow_pipeline_success.png)
 
 
-### 5.6 Expected first-run evidence
+### 5.6 Verified core-pipeline results (2 November 2026)
 
-- Source dataset: **12 production orders**, **12 machine operations**, **12 quality inspections**, and reference/maintenance rows.
-- dbt creates models under `staging`, `intermediate`, `marts` and runs tests.
-- Iceberg publishes **12 production fact rows** to `demo.manufacturing.manufacturing_production_metrics`.
-- MinIO Object Browser shows `warehouse/iceberg/manufacturing/manufacturing_production_metrics/` containing `data/` and `metadata/`.
-- All **7 Airflow tasks** should be green. These are **expected outcomes, not yet verified results**.
+**Historical checklist status before the successful rerun:** The input, dbt model creation, Iceberg publication and seven green Airflow tasks were *expected outcomes, not yet verified results*. The list immediately below records the subsequent successful verification, not predictions.
+
+- Input dataset included **12 production orders**, **12 machine operations** and **12 quality inspections**, plus reference and maintenance rows.
+- PostgreSQL and dbt analytical layers (`staging`, `intermediate`, `marts`) were populated; dbt build reported **65/65 successful operations**.
+- Apache Iceberg published **12 production fact rows** to `demo.manufacturing.manufacturing_production_metrics`.
+- MinIO Object Browser showed `warehouse/iceberg/manufacturing/manufacturing_production_metrics/` with `data/` and `metadata/`.
+- The final Airflow DAG run completed **7/7 SUCCESS**.
+
+These are **historically verified results**. The NovaForge Docker environment and its persisted local training data were later removed; a fresh run requires rebuilding the stack.
 
 
 
@@ -399,9 +416,10 @@ The successful run confirms end-to-end orchestration of source validation, Parqu
 The MinIO Object Storage Console is accessible at:
 http://localhost:9005/
 
-- Username: admin
-- Password: password123
-The local MinIO instance is used to store Apache Iceberg tables and manufacturing datasets.
+- Username: see `MINIO_ROOT_USER` in the local `.env` file (sample setup: `admin`).
+- Password: see `MINIO_ROOT_PASSWORD` in the local `.env` file; do not publish real credentials in this README.
+
+The local MinIO instance stores Apache Iceberg tables and manufacturing datasets. These are example local credentials only; do not reuse them for a network-accessible deployment.
 
 ![NovaForge MinIO Login](./pic/novaforge_minio_login.png)
 
@@ -431,10 +449,6 @@ The presence of both directories confirms that the Iceberg table structure was c
 
 ![NovaForge Iceberg Table Structure](./pic/novaforge_minio_iceberg_table_structure.png)
 
-
-```powershell
-docker exec -it novaforge-spark /opt/spark/bin/spark-sql --master "local[2]" --conf spark.jars.ivy=/tmp/.ivy2 --packages "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.1,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.postgresql:postgresql:42.7.5"
-```
 
 ### 6.1 Build the Parquet source (if not running Airflow)
 
@@ -651,7 +665,7 @@ The documentation confirms that the manufacturing analytics project is organized
 
 ![NovaForge dbt Docs — Complete Project Structure](./pic/novaforge_dbt_docs_full_project_structure.png)
 
-## dbt Lineage Examples
+### dbt Lineage Examples
 
 The following screenshots show example lineage relationships between staging, intermediate, fact, and mart models in the NovaForge dbt project.
 
@@ -659,7 +673,7 @@ The following screenshots show example lineage relationships between staging, in
 
 This lineage graph shows how machine operation facts are built from staging models such as machine operations, machines, and production orders.
 
-![dbt Lineage - fact_machine_operations](images/novaforge_dbt_lineage_fact_machine_operations.png)
+![dbt Lineage - fact_machine_operations](./pic/novaforge_dbt_lineage_fact_machine_operations.png)
 
 ---
 
@@ -667,7 +681,7 @@ This lineage graph shows how machine operation facts are built from staging mode
 
 This lineage graph shows how the `fact_production` model is built from the intermediate production model and how it feeds downstream reporting and data quality checks.
 
-![dbt Lineage - fact_production](images/novaforge_dbt_lineage_fact_production.png)
+![dbt Lineage - fact_production](./pic/novaforge_dbt_lineage_fact_production.png)
 
 ---
 
@@ -675,7 +689,7 @@ This lineage graph shows how the `fact_production` model is built from the inter
 
 This lineage graph shows how quality inspection facts are created from production orders and raw quality inspection staging data.
 
-![dbt Lineage - fact_quality_inspections](images/novaforge_dbt_lineage_fact_quality_inspections.png)
+![dbt Lineage - fact_quality_inspections](./pic/novaforge_dbt_lineage_fact_quality_inspections.png)
 
 ---
 
@@ -683,14 +697,11 @@ This lineage graph shows how quality inspection facts are created from productio
 
 This lineage graph shows the final reporting mart, which is built from the production fact model and represents daily manufacturing metrics at the facility level.
 
-![dbt Lineage - mart_production_daily](images/novaforge_dbt_lineage_mart_production_daily.png)
+![dbt Lineage - mart_production_daily](./pic/novaforge_dbt_lineage_mart_production_daily.png)
 
 ### 6.4 Spark partitioning, shuffles and caching
 
-```powershell
-docker exec novaforge-spark /opt/spark/bin/spark-submit --master "local[2]" /opt/project/spark/jobs/analyze_spark.py
-```
-
+The script is run with the same Iceberg, Hadoop AWS, AWS SDK and PostgreSQL packages used by the DAG; a bare `spark-submit` command is not equivalent in a clean container.
 
 ### Spark Performance Analysis — Execution Plan and Aggregation
 
@@ -743,29 +754,73 @@ This educational script shows `.explain(True)`, partitions, a narrow filter/sele
 
 Key measures include actual units, rejected units, defect rate, machine runtime, downtime and calculated production duration. Dimensions support facility, line, product and date reporting. Source files include a planned example of `energy_consumption_kwh` for schema evolution discussion.
 
-## 8. Iceberg Snapshots, Updates, Schema Evolution and Compaction
+## 8. Iceberg Snapshots, Updates, Schema Evolution and Compaction — Steps 15 and 16
 
+### Status and scope (documentation review: 3 November 2026)
 
-### Project Validation Status — November 2, 2026
+**Historical status at the end of the 2 November run:** Seven validation stages had been completed, while Iceberg Schema Evolution, Compaction and the final documentation review remained pending.  
+**Core lakehouse: COMPLETED and runtime-verified on 2 November 2026.** The main Airflow DAG produced an Iceberg table with 12 rows and confirmed snapshot metadata. The two advanced, **optional** follow-up scripts were added to the project and their intended operations are documented below.
 
-The main NovaForge Manufacturing Lakehouse pipeline has been successfully deployed and validated.
+| Exercise | Implementation | Runtime evidence |
+|---|---|---|
+| **Step 15 — Schema Evolution and Snapshots** | **COMPLETED — `iceberg_operations_demo.py` prepared and documented** | **Not run / not verified** |
+| **Step 16 — Data-file Compaction** | **COMPLETED — `compact_iceberg.py` prepared and documented** | **Not run / not verified** |
 
-Seven validation stages have been completed. Iceberg Schema Evolution, Compaction, and the final documentation review remain pending.
+These exercises use a **separate demonstration Iceberg table** rather than intentionally modifying the production metrics table. They do **not** form part of the seven-task DAG and are **not required to claim completion of the verified core project**.
 
-![NovaForge Manufacturing Lakehouse — Project Validation Status](./pic/novaforge_project_status_en.png)
+![NovaForge Manufacturing Lakehouse — Project Validation Status (historical screenshot)](./pic/novaforge_project_status_en.png)
 
+> **Evidence note:** The status image above was captured before the documentation review; it may display older task states. Do not present it as runtime evidence for Steps 15–16. The Docker infrastructure was removed afterward, so neither script was run during this documentation update.
 
-Once the main DAG has completed, the optional **separate demo table** may be used for Iceberg exercises. These scripts do **not** intentionally update the production metrics table.
+### Step 15 — Iceberg Schema Evolution and Snapshots — Completed implementation
+
+**Purpose:** Demonstrate an isolated Iceberg table lifecycle: initial table creation, row-level updates, schema changes with `ALTER TABLE`, and inspection of snapshot history. Unlike rewriting ordinary Parquet files, Iceberg records table changes through versioned metadata and snapshots.
+
+**Project script:** `spark/jobs/iceberg_operations_demo.py`  
+**Implementation/documentation:** **COMPLETED**  
+**Execution/result:** **NOT VERIFIED** (no successful run log or screenshot is available).
+
+To execute **only after the laptop is stable and the NovaForge stack has been rebuilt**, from PowerShell:
 
 ```powershell
-# Creates/replaces an isolated sample table and demonstrates UPDATE, ALTER TABLE and snapshots:
 docker exec novaforge-spark /opt/spark/bin/spark-submit --master "local[2]" --conf spark.jars.ivy=/tmp/.ivy2 --packages "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.1,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.postgresql:postgresql:42.7.5" /opt/project/spark/jobs/iceberg_operations_demo.py
+```
 
-# Optional data-file compaction (after the separate table exists):
+**Verification criteria for a future run:**
+
+1. The script exits with code `0` and reports the demonstration table's identifier.
+2. The table's schema reflects the intended `ALTER TABLE` change.
+3. The post-update data matches the intended `UPDATE` operation.
+4. A snapshot query shows the relevant table history.
+
+The table name, exact columns, affected rows and snapshot IDs must be taken from **actual script output**; they are intentionally not invented here. See [Lakehouse Operations](docs/ICEBERG_OPERATIONS.md).
+
+### Step 16 — Iceberg Data-file Compaction — Completed implementation
+
+**Purpose:** Demonstrate maintenance of small Parquet data files using Iceberg's `rewrite_data_files` maintenance action. Compaction rewrites eligible files into a more efficient layout without changing the logical row contents.
+
+**Project script:** `spark/jobs/compact_iceberg.py`  
+**Implementation/documentation:** **COMPLETED**  
+**Execution/result:** **NOT VERIFIED** (no successful run log or screenshot is available).
+
+Run only **after Step 15 has created its isolated demo table** and once the system is stable:
+
+```powershell
 docker exec novaforge-spark /opt/spark/bin/spark-submit --master "local[2]" --conf spark.jars.ivy=/tmp/.ivy2 --packages "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.1,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.postgresql:postgresql:42.7.5" /opt/project/spark/jobs/compact_iceberg.py
 ```
 
-The compaction procedure might rewrite **zero files** on a tiny synthetic dataset. See [Lakehouse Operations](docs/ICEBERG_OPERATIONS.md).
+**Verification criteria for a future run:**
+
+1. The script exits with code `0`.
+2. `rewrite_data_files` reports how many data files, if any, were rewritten.
+3. The row count and logical dataset remain unchanged.
+4. If files were rewritten, relevant snapshot and data-file metadata reflect the new layout.
+
+**Interpretation:** On a tiny synthetic dataset, Iceberg may legitimately rewrite **zero data files**. This is an expected possible outcome, **not** an observed result for this run. See [Lakehouse Operations](docs/ICEBERG_OPERATIONS.md).
+
+### Practical conclusion
+
+Steps 15 and 16 are **completed as prepared, documented extensions**. Runtime testing remains an optional future verification task and must not be confused with the successful production-metrics publication already verified by the seven-task Airflow DAG.
 
 ## 9. Historical Reprocessing, Catchup and Retries
 
@@ -795,15 +850,26 @@ python -m unittest discover -s tests -v
 
 After testing, save real screenshots in `pic/` and update the checklist. Do not describe untested commands as successful.
 
-## 11. Stop and Restart Safely
+## 11. Stop, Rebuild and Restart Safely
+
+For a **normal** stop that retains project data:
 
 ```powershell
-# Stop this project only; retain all named volumes and published Iceberg data:
+# Stop this project only; retain named volumes and Iceberg data:
 docker compose down
-
-# Restart later:
+# Later, while retained images and volumes still exist:
 docker compose up -d
 ```
+
+**Recorded cleanup after the 2 November 2026 laptop incidents:** The NovaForge containers, project-named images and volumes were removed. This means an ordinary `docker compose up -d` may no longer be sufficient to restore the former datasets or custom images. **After the computer is stable and has passed hardware checks**, a fresh environment can be initialized with:
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+docker compose config --quiet
+docker compose up -d --build
+```
+
+This rebuild creates **new training data**; it does not recover the removed PostgreSQL/MinIO volumes or past Iceberg snapshots. Avoid starting the 12-service stack until the laptop's unexpected shutdowns have been resolved.
 
 **Never use `docker compose down -v` unless intentionally discarding this project's PostgreSQL and MinIO training datasets.** Do not use global `docker system prune --volumes` while other laboratory environments are needed.
 
@@ -815,9 +881,10 @@ docker compose up -d
 - The sample uses Spark `local[2]`, so distributed-execution observations are educational; performance at industrial scale has not been benchmarked.
 - Airflow accesses the local Docker Engine via a mounted socket. This is powerful and appropriate **only for a trusted local sandbox**; production deployments need a safer executor / container orchestration design.
 - Local sample credentials and unencrypted internal traffic are **not production security**.
-- Snapshot/update, schema evolution and compaction scripts are optional exercises and still require execution and evidence.
+- The separate schema-evolution and compaction scripts (Steps 15–16) are **implemented and documented**, but their **runtime execution was not verified**. They must not be represented as completed runs.
+- This repository documents a successfully tested **historical** deployment; the local NovaForge Docker images/containers/volumes were subsequently removed.
+- Image links assume the corresponding screenshot files remain in `pic/`; verify those relative paths before publishing.
 
-**Project deliverable:** An independent, documented training implementation of a manufacturing analytics lakehouse with supplied sources, PySpark processing, dbt models/tests, an Airflow DAG, PostgreSQL, MinIO and Iceberg, ready for local validation.
+**Final project deliverable:** An independent, documented and **core-validated** manufacturing analytics lakehouse using PySpark, dbt, Airflow, PostgreSQL, MinIO and Apache Iceberg. The optional Steps 15–16 are completed as documented extensions, with execution evidence explicitly outstanding.
 
-docker compose stop
-
+**Author:** R. Lisovenko
