@@ -1,0 +1,5 @@
+An e-commerce company receives continuous order events throughout the day. These events need to be shared with systems such as inventory, payments, notifications, and analytics.
+
+To support this real-time flow, the team uses Apache Kafka as the event-streaming platform.
+
+Let's run Kafka locally, create an orders topic, and verify that order events can move successfully from a producer to a consumer.
