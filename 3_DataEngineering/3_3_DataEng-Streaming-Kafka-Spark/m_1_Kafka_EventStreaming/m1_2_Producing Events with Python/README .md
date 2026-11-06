@@ -1,7 +1,6 @@
 # m1_2 — Producing Events with Python
 
 **Course:** Streaming Data Pipelines with Kafka and Spark  
-**Provider:** Edureka / Coursera  
 **Module:** 1 — Event Streaming with Apache Kafka  
 **Lab:** Producing Events with Python  
 **Executor:** R. Lisovenko  

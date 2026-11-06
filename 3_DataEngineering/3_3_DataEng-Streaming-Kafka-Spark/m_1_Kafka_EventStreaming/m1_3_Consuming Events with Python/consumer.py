@@ -22,7 +22,12 @@ print("=" * 60)
 try:
     for message in consumer:
         order = message.value
+        required_fields = ("order_id", "customer", "amount", "status")
 
+        if not all(field in order for field in required_fields):
+            print(f"Skipping incompatible event: {order}")
+            continue
+        
         print(
             f"Received {order['order_id']} | "
             f"Customer: {order['customer']} | "
