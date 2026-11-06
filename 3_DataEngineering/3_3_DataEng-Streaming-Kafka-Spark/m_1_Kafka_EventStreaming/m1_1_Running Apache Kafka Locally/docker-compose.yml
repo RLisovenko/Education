@@ -3,6 +3,8 @@ services:
   kafka:
     image: apache/kafka:3.9.1
     container_name: kafka-local
+    cpus: 1.0
+    mem_limit: 2g
     ports:
       - "9092:9092"
     environment:
