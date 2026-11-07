@@ -55,7 +55,7 @@ enriched_stream = (
     filtered_stream
     .withColumn(
         "priority",
-        when(col("amount") >= 2000, "CRITICAL")
+        when(col("amount") >= 2000, "CRITICAL")    
         .otherwise("HIGH")
     )
     .withColumn(
