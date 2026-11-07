@@ -1,0 +1,5 @@
+An e-commerce company receives customer orders continuously through Apache Kafka. During peak hours, the operations team needs more than a list of individual orders—they need to understand activity over short periods of time.
+
+For example, they want to know how many orders arrived within each 10-second interval and the total order value generated during that window.
+
+To support this requirement, the data engineering team uses PySpark Structured Streaming.
