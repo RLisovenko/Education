@@ -1,0 +1,7 @@
+services:
+  spark:
+    image: apache/spark:3.5.7
+    container_name: checkpoint-recovery-spark
+    command: tail -f /dev/null
+    volumes:
+      - ./:/opt/project
