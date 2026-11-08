@@ -1,0 +1,16 @@
+# Local Python environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Streaming runtime state: KEEP locally, NEVER put in Git
+checkpoints/
+data/*.db
+data/*.db-*
+pid/
+logs/
+*.log
+
+# Temporary drafts: files/folders whose names start with xxx
+xxx*
