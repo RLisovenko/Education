@@ -2,7 +2,7 @@
 
 **Executor:** Li R.  
 **Topic:** Failure detection, consumer offset management, and controlled recovery in a Kafka-based Python pipeline  
-**Status:** Prepared for execution; runtime results not yet verified  
+**Status:** **COMPLETED — simulated failure and recovery verified**  
 **Date:** 08 November 2026
 
 ## 1. Objective
@@ -22,10 +22,12 @@ m3_L3-Handling-Failures-Restarting-Pipeline/
 ├── pipeline.py               # Failure-aware Kafka consumer (supplied)
 ├── producer.py               # Kafka producer with five demonstration events (supplied)
 ├── requirements.txt          # kafka-python==2.2.15 (supplied)
-├── failed_event.json         # Example failure record; may be overwritten at runtime
+├── failed_event.json         # Failure diagnostic file (generated/overwritten on failure)
 └── pic/
     ├── lab3_handling_failures_lesson_2026-11-08.png
-    └── lab3_project_directory_2026-11-08.png
+    ├── lab3_project_directory_2026-11-08.png
+    ├── lab3_failure_detected_FAIL003_offset2_2026-11-08.png
+    └── lab3_recovery_confirmed_FAIL003_to_FAIL005_2026-11-08.png
 ```
 
 ![Initial project directory](./pic/lab3_project_directory_2026-11-08.png)
@@ -110,7 +112,7 @@ docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --create --if-not-exists 
 docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --describe --topic failure-orders --bootstrap-server localhost:9092
 ```
 
-These commands reuse the existing broker. If the topic already exists, its partition configuration is not modified. The illustrative offsets below apply to a **fresh topic and fresh consumer group only**; offsets in an existing topic will differ.
+These commands reuse the existing broker. If the topic already exists, its partition configuration is not modified. The verified demonstration used partition `0` with offsets `0–4`. In future executions, offsets may differ if the topic or consumer group is reused.
 
 ## 5. Execution — simulate a failure and recover
 
@@ -132,7 +134,7 @@ Open a second PowerShell terminal in the same folder:
 python .\producer.py
 ```
 
-The producer attempts to publish the following five events:
+The producer published the following five events during the verified execution:
 
 | Event | Customer | Amount | Simulated failure? | Expected normal-mode behavior |
 |---|---|---:|---|---|
@@ -152,7 +154,7 @@ The pipeline catches the simulated exception and writes a JSON record to `failed
 Get-Content .\failed_event.json
 ```
 
-**Provided example:** The uploaded `failed_event.json` shows `FAIL003` in topic `failure-orders`, partition `0`, offset `2`, with the error `Simulated processing failure for demonstration`. This is a *supplied reference record*, not evidence that the pipeline has already run successfully in the current environment.
+**Verified execution:** The pipeline reported `FAIL003` in topic `failure-orders`, partition `0`, offset `2`, with the error `Simulated processing failure for demonstration` and `Failure saved to: failed_event.json`. The previously supplied JSON contains the same event and failure metadata. The terminal screenshot independently confirms that the file was reported as written; the file's contents were not re-opened in that screenshot.
 
 **Important:** A new failure can **overwrite** `failed_event.json` because the script opens it with mode `"w"`. If the original record must be retained, copy it before executing the lab.
 
@@ -164,9 +166,9 @@ Once the original pipeline has stopped and the producer has finished, run:
 python .\pipeline.py --recover
 ```
 
-Expected console header: `Recovery Mode : ON`.
+Verified console header: `Recovery Mode : ON`.
 
-The consumer continues from its previously committed offset (if a commit exists for the same group). In a fresh single-partition run it should replay `FAIL003`, then consume `FAIL004` and `FAIL005`. Allow it to process these events, then stop with `Ctrl+C`.
+The consumer continues from its previously committed offset (if a commit exists for the same group). In the documented run, recovery **did** replay `FAIL003` (offset `2`), followed by `FAIL004` (offset `3`) and `FAIL005` (offset `4`). The recovery process remained running when the screenshot was taken; stop it with `Ctrl+C` after capturing the result.
 
 **Why replay works:** Manual commits occur after successful messages. The failure for `FAIL003` happens **before** `consumer.commit()`, so that record remains uncommitted and can be retried on restart.
 
@@ -176,7 +178,7 @@ The consumer continues from its previously committed offset (if a commit exists 
 docker exec kafka-local /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group failure-recovery-pipeline
 ```
 
-Check the committed position after recovery. For a fresh topic containing five records in partition 0, the committed **next offset** should be `5`, after processing offsets `0` through `4`. Actual values may differ if the topic or group was reused.
+Check the committed position after recovery. For this five-record run, the expected committed **next offset** is `5`, after processing offsets `0`–`4`. **This CLI verification was not captured**, so committed offset `5` is an expectation, not an independently observed monitoring result.
 
 ## 6. What the code does — and does not do
 
@@ -188,17 +190,45 @@ Check the committed position after recovery. For a fresh topic containing five r
 - **Consumer group state matters:** `auto_offset_reset="earliest"` applies only if no valid committed position exists for that consumer group. Rerunning the lab with previously committed offsets may skip earlier records.
 - **Error reporting:** The outer `except Exception: pass` suppresses propagation of the processing error; rely on the visible failure message and JSON record rather than exit code alone.
 
-## 7. Evidence to capture after execution
+## 7. Verified execution and screenshots — 08 November 2026
 
-| Screenshot | Evidence needed | Status |
-|---|---|---|
-| `pic/lab3_python_environment_prepared.png` | Python 3.12 `.venv`, installed dependency | Pending |
-| `pic/lab3_failure_detected.png` | Normal-mode failure at `FAIL003`, Kafka offset and failure file | Pending |
-| `pic/lab3_failed_event_json.png` | Saved event metadata and failure reason | Pending |
-| `pic/lab3_recovery_processed_remaining_events.png` | Recovery mode consumes `FAIL003`–`FAIL005` | Pending |
-| `pic/lab3_final_consumer_offsets.png` | Committed offset after recovery (optional) | Pending |
+The full failure-and-restart sequence was carried out in the Windows PowerShell / VS Code environment. The producer, normal-mode consumer, and recovered consumer outputs were captured without changing the original Python programs.
 
-The two images already embedded above document the lesson title and folder layout, **not the execution results**. Add execution screenshots only after actual commands have been run and verified.
+### Phase 1 — Producer and planned failure
+
+The producer successfully published five records to Kafka topic `failure-orders`, partition `0`, at offsets `0–4`. The normal-mode pipeline processed `FAIL001` and `FAIL002`, then stopped at `FAIL003` (offset `2`). The console displayed the simulated exception and confirmed that the failure record was saved to `failed_event.json`.
+
+| Kafka offset | Record | Observed normal-mode result |
+|---:|---|---|
+| `0` | `FAIL001` | Processed successfully |
+| `1` | `FAIL002` | Processed successfully |
+| `2` | `FAIL003` | Simulated failure; consumer stopped; diagnostic saved |
+| `3` | `FAIL004` | Published; not processed before failure |
+| `4` | `FAIL005` | Published; not processed before failure |
+
+![Normal-mode pipeline failure on FAIL003 at Kafka offset 2, alongside successful publication of five records](./pic/lab3_failure_detected_FAIL003_offset2_2026-11-08.png)
+
+### Phase 2 — Restart with recovery mode
+
+In another terminal, the same consumer application was started with:
+
+```powershell
+python .\pipeline.py --recover
+```
+
+The captured output confirms **Recovery Mode: ON** and successful processing of the uncommitted record `FAIL003`, followed by `FAIL004` and `FAIL005`.
+
+| Kafka offset | Record | Observed recovery result |
+|---:|---|---|
+| `2` | `FAIL003` | Processed (amount `-999.0`, unchanged) |
+| `3` | `FAIL004` | Processed |
+| `4` | `FAIL005` | Processed |
+
+![Recovery mode successfully reprocesses FAIL003 and continues through FAIL005; original failure and producer outputs visible in parallel](./pic/lab3_recovery_confirmed_FAIL003_to_FAIL005_2026-11-08.png)
+
+**Outcome:** Recovery was verified for the **failure simulation and Kafka consumer progress**. The application continued from the failed event rather than restarting at `FAIL001`. The screenshots **do not** independently establish transactional exactly-once delivery or a committed Kafka group offset of `5`.
+
+**Data-quality limitation:** The recovered `FAIL003` still has a negative amount. The source code skips the explicit simulated exception when `--recover` is supplied; it does not repair or validate the original business record.
 
 ## 8. Troubleshooting
 
@@ -216,4 +246,4 @@ The two images already embedded above document the lesson title and folder layou
 
 This lab illustrates a central Kafka recovery principle: **commit a record's progress only after its processing step succeeds**. When the simulated processing failure occurs, the event remains available for replay. Restarting the same consumer group in recovery mode can resume processing from the saved Kafka position.
 
-**Final status:** Execution instructions and reference artifacts prepared. Actual runtime recovery remains to be verified.
+**Final status: COMPLETED AND VERIFIED (08 November 2026).** Successful production of `FAIL001`–`FAIL005` (offsets `0–4`), controlled failure on `FAIL003` (offset `2`), diagnostic-file notification, and recovery-mode processing of `FAIL003`–`FAIL005` are documented with actual screenshots. The final committed group offset was not separately queried.

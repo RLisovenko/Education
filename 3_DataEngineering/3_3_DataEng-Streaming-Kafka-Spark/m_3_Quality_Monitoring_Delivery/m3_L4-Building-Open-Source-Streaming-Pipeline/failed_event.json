@@ -1,0 +1,13 @@
+{
+  "event": {
+    "order_id": "CAP005",
+    "customer": "Meera",
+    "amount": 2200.0,
+    "status": "CREATED",
+    "simulate_failure": true
+  },
+  "topic": "capstone-orders",
+  "partition": 0,
+  "offset": 4,
+  "error": "Simulated processing failure for capstone recovery"
+}

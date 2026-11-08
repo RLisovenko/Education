@@ -1,0 +1,3 @@
+An e-commerce company processes customer orders continuously through Apache Kafka.
+
+The business needs more than simple event delivery. The streaming pipeline must validate incoming records, reject poor-quality events, process valid orders, capture failures, recover without replaying completed work, and provide visibility into consumer lag.

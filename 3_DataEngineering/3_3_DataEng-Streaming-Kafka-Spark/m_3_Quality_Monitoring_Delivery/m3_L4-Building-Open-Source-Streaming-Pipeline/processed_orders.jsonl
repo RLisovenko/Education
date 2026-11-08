@@ -1,0 +1,36 @@
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
+{"order_id": "CAP001", "customer": "Asha", "amount": 1250.5, "status": "CREATED"}
+{"order_id": "CAP002", "customer": "Rahul", "amount": 899.0, "status": "PAID"}
+{"order_id": "CAP004", "customer": "Vikram", "amount": 1750.0, "status": "PAID"}
+{"order_id": "CAP005", "customer": "Meera", "amount": 2200.0, "status": "CREATED", "simulate_failure": true}
+{"order_id": "CAP006", "customer": "Neha", "amount": 2450.25, "status": "SHIPPED"}
+{"order_id": "CAP007", "customer": "Arjun", "amount": 1100.0, "status": "DELIVERED"}
