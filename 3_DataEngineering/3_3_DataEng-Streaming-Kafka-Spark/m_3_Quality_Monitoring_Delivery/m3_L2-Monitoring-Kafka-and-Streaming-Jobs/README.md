@@ -1,232 +1,317 @@
 # m3_L2 — Monitoring Kafka and Streaming Jobs
 
 **Module:** 3 — Quality, Monitoring, and Delivery  
-**Lab2:** Monitoring Kafka and Streaming Jobs  
+**Lab:** Monitoring Kafka and Streaming Jobs  
 **Executor:** LiR.  
-**Status:** Prepared for execution — results pending  
-**Documentation date:** 08 November 2026
+**Status:** **COMPLETED — EXECUTION VERIFIED**  
+**Execution and documentation:** 08 November 2026
 
 ## 1. Objective
 
-Monitor the progress and operational behavior of a Kafka-based streaming application. The exercise uses three Python programs: an event producer, a Kafka consumer acting as a streaming job, and a separate consumer-lag monitor. The goal is to observe how new messages, committed consumer offsets, processing throughput, and backlog relate to each other.
+Monitor a Kafka-based streaming application using a Python event producer, a streaming consumer, and an independent monitoring process. Observe the relationship between **published records**, **processed records**, **committed consumer-group offsets**, **consumer lag**, and **processing throughput**.
 
-**Important:** Despite the general lesson title, the provided `streaming_job.py` is a **Python Kafka consumer**, not an Apache Spark application. No Spark container or Kafka–Spark connector is required for this lab.
+The original lab uses **Python Kafka clients**, not Spark Structured Streaming. A Spark container, Spark Kafka Connector, and additional Docker network are not required for this exercise.
 
-### Processing flow
+### Processing architecture
 
 ```text
-                    Kafka broker: kafka-local
-Python producer.py -- localhost:9092 --> topic: monitoring-orders
-                                               |
-                                               v
-                                  streaming_job.py
-                                  group: order-streaming-job
-                                  reads messages and commits offsets
-                                               |
-                                               v
-                                      Console metrics
+                              Apache Kafka: kafka-local
+                          Topic: monitoring-orders (partition 0)
+                                           ^
+                                           |
+       producer.py  ----------------------+      Publishes MON001–MON008
+       Host: localhost:9092               |
+                                           +------------------------+
+                                                                    |
+                                                                    v
+                           streaming_job.py (KafkaConsumer)
+                           Group: order-streaming-job
+                           Reads records and auto-commits offsets
+                           Displays processed count and average rate
+                                                                    |
+                                                                    v
+                                        Console processing metrics
 
-kafka_monitor.py -- Kafka Admin API + end_offsets -->
-    latest offset / committed group offset / consumer lag / status
+       kafka_monitor.py (independent monitor)
+         -> Kafka end offset + group's committed offset
+         -> Consumer lag + status every 3 seconds
 ```
 
-## 2. Project files
+## 2. Project structure and original files
 
 ```text
 m3_L2-Monitoring-Kafka-and-Streaming-Jobs/
-├── README.md                 # Detailed execution guide
-├── README.txt                # Quick PowerShell command reference
-├── kafka_monitor.py          # Lag and offset monitor
-├── streaming_job.py          # Python Kafka consumer / streaming job
-├── producer.py               # Generates eight sample order events
-├── requirements.txt          # kafka-python==2.2.15
-├── .venv/                    # Local virtual environment (not committed)
+├── README.md
+├── README.txt
+├── kafka_monitor.py
+├── streaming_job.py
+├── producer.py
+├── requirements.txt
+├── .venv/                                       # local only; exclude from Git
 └── pic/
     ├── lab2_project_directory_2026-11-08.png
-    └── ...                   # Add verified execution screenshots here
+    ├── python_venv_requirements_install_2026-11-08.png
+    ├── lab2_monitor_job_producer_processing_2026-11-08.png
+    └── lab2_monitor_job_producer_healthy_2026-11-08.png
 ```
 
-![Lab 2 project directory](./pic/lab2_project_directory_2026-11-08.png)
+![Project directory before execution](./pic/lab2_project_directory_2026-11-08.png)
 
-The original Python scripts and requirements are preserved without changes. Place the four supplied source files in this folder using their normal filenames (`producer.py`, not an upload suffix such as `producer(4).py`).
+The original Python programs and requirements were not modified. The uploaded files use the normal local filenames `kafka_monitor.py`, `streaming_job.py`, `producer.py`, and `requirements.txt`.
 
-## 3. Original implementation
+### Confirmed configuration
 
-| File | Configuration / behavior |
+| File | Actual implementation |
 |---|---|
-| `producer.py` | Connects to `localhost:9092`; publishes `MON001` through `MON008` to `monitoring-orders` with a one-second pause between messages; prints partition and actual offset. |
-| `streaming_job.py` | Consumes `monitoring-orders` in group `order-streaming-job`; uses `auto_offset_reset="earliest"` and `enable_auto_commit=True`; shows processed events and rate. |
-| `kafka_monitor.py` | Reads the end offset for **partition 0**, checks the **committed offset** of group `order-streaming-job`, and prints lag and a simple status every three seconds. |
 | `requirements.txt` | `kafka-python==2.2.15` |
+| `producer.py` | Publishes eight order events (`MON001`–`MON008`) to `monitoring-orders`; one-second delay between sends; `localhost:9092` |
+| `streaming_job.py` | `KafkaConsumer` with group ID `order-streaming-job`, `auto_offset_reset="earliest"`, and `enable_auto_commit=True`; prints cumulative processed count and average rate |
+| `kafka_monitor.py` | Monitors partition `0`, polls latest and committed offsets every three seconds, and prints consumer lag and a simple status |
 
-### Kafka Monitor status thresholds
+### Monitor calculation and thresholds
 
-In the supplied monitor, `lag = max(latest_offset - consumer_offset, 0)`.
+```python
+lag = max(latest_offset - consumer_offset, 0)
+```
 
-| Consumer lag | Displayed status |
+| Consumer lag | Lab status |
 |---:|---|
 | `0` | `HEALTHY` |
 | `1–3` | `PROCESSING` |
 | `4 or more` | `LAGGING` |
 
-These labels are **lab-defined thresholds**, not Kafka's built-in broker-health classifications. The monitor covers partition **0 only**; if additional partitions are introduced, its reported lag is not the full consumer-group lag.
+These are **thresholds defined by the example script**; they are not native Kafka broker-health classifications. The monitor examines **partition 0 only**. A zero lag indicates no outstanding committed backlog **for that partition and consumer group**, not a guarantee that the entire system is healthy.
 
-The streaming job's displayed `Rate` is the number of records processed since the process started divided by elapsed wall-clock time; it is **not** an instantaneous throughput metric. The Kafka consumer commits offsets automatically, so committed progress may briefly lag behind records already displayed as processed.
+The consumer's `Rate` metric is calculated as **records processed since process start / elapsed wall-clock time**. It is an average since startup, not instantaneous throughput or a load-test benchmark.
 
-## 4. Environment preparation
+## 3. Environment preparation — verified
 
-Use **Windows PowerShell** in the folder containing the original scripts. Reuse the already configured `kafka-local` container; do not create a second broker or start unrelated Spark/Airflow stacks.
+The existing Kafka container, `kafka-local`, was reused; no second broker was created. Python 3.12 was selected for an isolated per-lab environment.
 
-### Step 1 — Start Kafka only if needed
+### Step 1 — Check Kafka
+
+In a PowerShell terminal inside the Lab 2 directory:
 
 ```powershell
 docker ps -a --filter "name=kafka-local"
 # Only if the existing broker is stopped:
 docker start kafka-local
-# Verify it is running:
+# Confirm running state:
 docker ps --filter "name=kafka-local"
 ```
 
-### Step 2 — Prepare Python 3.12
+### Step 2 — Create and activate Python virtual environment
 
 ```powershell
-# Create once from the lab directory:
 py -3.12 -m venv .venv
-
-# Install from the unmodified requirements file:
-.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
-
-# Verify Python Kafka clients:
-.\.venv\Scripts\python.exe -c "from kafka import KafkaProducer, KafkaConsumer; from kafka.admin import KafkaAdminClient; print('Kafka monitoring dependencies OK')"
+.\.venv\Scripts\Activate.ps1
 ```
 
-Using `.\.venv\Scripts\python.exe` avoids PowerShell activation-policy problems and ensures all three programs use the same environment. Select `.venv\Scripts\python.exe` as the VS Code Python interpreter if needed.
+The PowerShell prompt should begin with `(.venv)`. Activate it separately in every new terminal, or call `.\.venv\Scripts\python.exe` explicitly.
 
-### Step 3 — Verify or create the topic
+### Step 3 — Install from requirements.txt
 
 ```powershell
-docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092
+python -m pip install -r .\requirements.txt
+```
 
-# Create only if missing; --if-not-exists does not reset an existing topic:
+**Observed installation result:**
+
+```text
+Collecting kafka-python==2.2.15 (from -r .\requirements.txt (line 1))
+Installing collected packages: kafka-python
+Successfully installed kafka-python-2.2.15
+```
+
+The installation completed successfully. The notice about a newer pip version was informational, not an installation error.
+
+### Step 4 — Verify Kafka Python imports
+
+```powershell
+python -c "from kafka import KafkaProducer, KafkaConsumer; from kafka.admin import KafkaAdminClient; print('Kafka monitoring dependencies OK')"
+```
+
+For VS Code, use **Python: Select Interpreter** and choose `.venv\Scripts\python.exe`. The environment directory must not be committed to Git.
+
+### Step 5 — Ensure the topic exists
+
+```powershell
 docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic monitoring-orders --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 
 docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --describe --topic monitoring-orders --bootstrap-server localhost:9092
 ```
 
-The single-partition configuration matches `kafka_monitor.py`, which explicitly monitors `PARTITION = 0`.
+The single partition matches the unchanged monitor script (`PARTITION = 0`). The `--if-not-exists` option does not delete, recreate, or reset an existing topic.
 
-## 5. Lab execution — three VS Code terminals
+## 4. Execution procedure — three VS Code terminals
 
-All three terminals must use the same Lab 2 working directory. **Do not type the producer command into an active consumer or monitor terminal.**
+Use three PowerShell terminals opened in the same Lab 2 directory. Activate `.venv` in each terminal, or call the interpreter directly as shown below.
 
-### Terminal 1 — Start the streaming job
+### Terminal 1 — Streaming Job (start first)
 
 ```powershell
 .\.venv\Scripts\python.exe .\streaming_job.py
 ```
 
-Wait until the console says `MONITORED STREAMING JOB` and `Waiting for streaming events...`. The process continues running until stopped with `Ctrl+C`.
+This Python consumer reads from topic `monitoring-orders`, joins group `order-streaming-job`, and reports each processed record and cumulative average rate. Starting it first also establishes the consumer group for monitoring.
 
-### Terminal 2 — Start the monitor
+### Terminal 2 — Kafka Monitor
 
 ```powershell
 .\.venv\Scripts\python.exe .\kafka_monitor.py
 ```
 
-The monitor periodically displays:
+This monitor runs continuously and reports latest offset, committed consumer-group offset, consumer lag, and a lab-defined status every three seconds. If it was started before the consumer group became available, restart it once the streaming job is running.
 
-```text
-Topic            : monitoring-orders
-Partition        : 0
-Latest Offset    : ...
-Consumer Offset  : ...
-Consumer Lag     : ...
-Status           : HEALTHY / PROCESSING / LAGGING
-```
-
-The consumer group should be established by the running streaming job before monitoring starts. If an initial lookup fails, verify the broker and group are available, then restart the monitor.
-
-### Terminal 3 — Publish the test data
+### Terminal 3 — Event Producer
 
 ```powershell
 .\.venv\Scripts\python.exe .\producer.py
 ```
 
-The producer submits eight orders and finishes automatically.
+Start Producer only after the streaming job and monitor are running. It publishes the following eight sample orders:
 
-| Order ID | Customer | Amount |
+| Event | Customer | Amount |
 |---|---|---:|
-| MON001 | Asha | 1200.00 |
-| MON002 | Rahul | 850.50 |
-| MON003 | Meera | 2100.00 |
-| MON004 | Vikram | 675.25 |
-| MON005 | Neha | 1450.00 |
-| MON006 | Arjun | 3200.50 |
-| MON007 | Priya | 990.00 |
-| MON008 | Karan | 1850.75 |
+| `MON001` | Asha | 1200.00 |
+| `MON002` | Rahul | 850.50 |
+| `MON003` | Meera | 2100.00 |
+| `MON004` | Vikram | 675.25 |
+| `MON005` | Neha | 1450.00 |
+| `MON006` | Arjun | 3200.50 |
+| `MON007` | Priya | 990.00 |
+| `MON008` | Karan | 1850.75 |
 
-### Expected behavior (not yet verified)
+The Producer exits after successful publication. The Monitor and Streaming Job continue running until stopped.
 
-1. The producer confirms publication of all eight records, with partition and actual offsets.
-2. The streaming job displays each consumed record and cumulative processed count and rate.
-3. The monitor periodically compares the latest partition offset with the consumer group's committed offset.
-4. Consumer lag may briefly rise while new records are arriving and later decrease after the consumer processes and commits them.
+## 5. Observed execution results — verified
 
-**Offset note:** Kafka offsets are persistent log positions. A new topic typically starts at offset 0, but a reused topic may have higher offsets. They must be recorded from the actual output, not assumed.
+The three-terminal execution completed successfully. The original scripts were used without code changes.
 
-### Optional controlled lag observation
+### 5.1 Kafka Producer
 
-For a clearer demonstration of backlog, let the consumer group establish and commit progress, then stop **only** `streaming_job.py` using `Ctrl+C`. Keep the monitor running, publish another batch with `producer.py`, and observe how the latest offset advances while the group's committed offset remains behind. Restart `streaming_job.py` to observe catch-up. Do not delete the topic or reset consumer-group offsets.
+The Producer published **eight messages** to topic `monitoring-orders` in **partition 0**.
 
-## 6. Verification commands
+| Published record | Partition | Kafka offset |
+|---|---:|---:|
+| `MON001` | 0 | 0 |
+| `MON002` | 0 | 1 |
+| `MON003` | 0 | 2 |
+| `MON004` | 0 | 3 |
+| `MON005` | 0 | 4 |
+| `MON006` | 0 | 5 |
+| `MON007` | 0 | 6 |
+| `MON008` | 0 | 7 |
 
-Run these in a **free PowerShell terminal**:
+Producer confirmation:
+
+```text
+All monitoring events published successfully.
+```
+
+The offsets `0–7` are **actual observed offsets for this execution**, not values hard-coded into the Producer. Re-running the Producer appends new Kafka records at new offsets.
+
+### 5.2 Streaming Job
+
+The streaming consumer processed all **eight events**. The final visible record was:
+
+```text
+Processed MON008 | Customer: Karan | Amount: 1850.75
+Partition: 0 | Offset: 7
+Metrics -> Processed: 8 | Rate: 0.14 events/sec
+```
+
+**Observed processed records:** `8`. The last displayed average rate, `0.14 events/sec`, reflects elapsed wall-clock time since that consumer process started and should not be interpreted as a maximum Kafka throughput measurement.
+
+### 5.3 Consumer lag: temporary backlog and catch-up
+
+Two snapshots demonstrate the progress of the consumer group:
+
+| Snapshot | Latest offset | Committed group offset | Consumer lag | Monitor status |
+|---|---:|---:|---:|---|
+| During processing | 6 | 5 | 1 | `PROCESSING` |
+| During processing | 8 | 5 | 3 | `PROCESSING` |
+| After catch-up | 8 | 8 | **0** | **`HEALTHY`** |
+
+Kafka offsets denote positions in a partition. After processing records with offsets `0–7`, the **next position is 8**. The final committed consumer offset `8` is therefore consistent with eight records processed, and the computed lag is zero:
+
+```text
+Latest Offset   : 8
+Consumer Offset : 8
+Consumer Lag    : 0
+Status          : HEALTHY
+```
+
+The transient lag of `1–3` was consistent with consumption and auto-commit progress being observed at different moments. Kafka auto-commits and the monitor's three-second polling interval can cause the displayed lag to temporarily differ from the records already printed by the consumer.
+
+## 6. Additional verification
+
+Use a free terminal to inspect the Kafka consumer group's committed progress:
 
 ```powershell
-# Broker and topic:
-docker ps --filter "name=kafka-local"
-docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --describe --topic monitoring-orders --bootstrap-server localhost:9092
-
-# Current committed group offsets and lag, where available:
 docker exec kafka-local /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group order-streaming-job
 ```
 
-The Kafka CLI and the Python monitor may show different snapshots during active processing; compare timestamps and refresh after auto commits.
+A live Kafka CLI snapshot may differ from the monitor's output if the job is still processing or auto-committing offsets. The values above refer to the recorded execution.
 
-## 7. Troubleshooting
+## 7. Troubleshooting and operational notes
 
-| Symptom | Checks / action |
+| Symptom | Investigation |
 |---|---|
-| `NoBrokersAvailable` / connection refused | Confirm Docker Desktop, `kafka-local`, and the host listener on `localhost:9092`. |
-| `No module named kafka` | Install `requirements.txt` using the same `.venv` interpreter used to run the scripts. |
-| Nothing appears in the streaming job | Check topic name, broker state, consumer group and whether the producer ran; existing committed offsets override `earliest`. |
-| Monitor shows lag while job printed events | Auto-committed group offsets can update later than the consumer's console output. |
-| Monitor stays at `LAGGING` | Check that the streaming job is running and committing; examine topic/partition assignments and processing errors. |
-| `HEALTHY` with no new work | Lag 0 indicates no committed backlog for monitored partition 0; it does not mean that every part of a production pipeline is healthy. |
-| Monitor and job disagree | Monitor samples every 3 seconds; job output is continuous and commit intervals differ. |
+| `NoBrokersAvailable` | Verify Docker Desktop, running `kafka-local`, and `localhost:9092` host listener. |
+| `No module named kafka` | Use the `.venv` interpreter and reinstall from `requirements.txt`. |
+| Streaming job shows no new events | Check topic, broker, group ID, and previously committed offsets; `earliest` is not applied when committed group offsets already exist. |
+| Monitor shows a lag despite printed messages | Auto-commit and monitoring intervals differ; allow time for the group commit and next monitor sample. |
+| `LAGGING` persists | Check whether the streaming job is running, processing and committing; inspect consumer errors and partition assignment. |
+| Lag is 0 but the system is unresponsive | A zero committed lag for partition 0 alone is not a complete service-health check. |
+| No group offsets initially available | Run the streaming job first and restart the monitor after group initialization. |
 
-## 8. Evidence to capture after execution
+### Safe shutdown
 
-Save actual VS Code screenshots in `pic/`:
+Stop both persistent processes with `Ctrl+C`: first Kafka Monitor, then Streaming Job. Producer exits automatically. If no further exercise needs Kafka:
 
-- `monitoring_producer_eight_events.png` — producer event offsets.
-- `monitoring_streaming_job_processing.png` — processed records and event rate.
-- `monitoring_consumer_lag.png` — monitor offsets, lag, and status.
-- `monitoring_three_terminals.png` — optional overview showing job, monitor, and producer together.
+```powershell
+docker stop kafka-local
+```
 
-Only insert screenshots and measured offsets after the real run. This document currently contains **setup and expected results**, not claims of completed execution.
+Do not remove the broker, topic, or its data. Add `.venv/` to `.gitignore`.
 
-## 9. Safe shutdown
+## 8. Conclusion
 
-1. Use `Ctrl+C` in the Monitor terminal.
-2. Use `Ctrl+C` in the Streaming Job terminal.
-3. The Producer exits by itself.
-4. If Kafka will not be used for the next activity, `docker stop kafka-local`.
+The lab demonstrates working visibility into Kafka events, the consumption rate of a Python streaming job, and the consumer group's offset progress. The observed lag temporarily reached `1–3` during processing, then returned to **`0`** when the committed offset caught up with the latest offset. The final monitor status was **`HEALTHY`**.
 
-Do not delete the Kafka container, topics, or persisted broker data. Exclude `.venv/` from version control.
+**Final verification:** 8 events published, 8 processed, partition 0, offsets 0–7, committed offset 8, consumer lag 0.
 
-## Conclusion
+**Execution status: COMPLETED — VERIFIED.**
 
-This exercise demonstrates basic operational visibility for Kafka event processing: producer activity, consumer throughput, committed offsets, and consumer lag. Monitoring multiple signals and their trends is more informative than relying on a single health label.
+## 9. Execution evidence — screenshots
 
-**Execution status:** Prepared; awaiting measured output and screenshots.
+### Environment preparation
+
+Python 3.12 `.venv` was created and activated. Installation from `requirements.txt` completed with `Successfully installed kafka-python-2.2.15`.
+
+![Verified Python virtual environment and requirements installation](./pic/python_venv_requirements_install_2026-11-08.png)
+### Final Monitoring Verification
+
+The pipeline successfully processed all published events.
+
+- Topic: `monitoring-orders`
+- Partition: `0`
+- Published offsets: `16–23`
+- Latest offset: `24`
+- Consumer offset: `24`
+- Consumer lag: `0`
+- Final status: `HEALTHY`
+
+![Final Kafka monitoring — Consumer Lag 0, HEALTHY](./pic/monitoring_orders_final_offsets_16-23_healthy_2026-11-08.png)
+### Three-terminal execution — active processing
+
+The Producer successfully published eight events. The Streaming Job processed records while the Monitor showed temporary lag (`1` and `3`) with status `PROCESSING`.
+
+![Kafka Monitor, Streaming Job and Producer during processing](./pic/lab2_monitor_job_producer_processing_2026-11-08.png)
+
+### Final result — consumer fully caught up
+
+The final screenshot shows all eight records published and processed, **Latest Offset = 8**, **Consumer Offset = 8**, **Consumer Lag = 0**, and **Status = HEALTHY**.
+
+![Final healthy Kafka consumer lag and eight processed events](./pic/lab2_monitor_job_producer_healthy_2026-11-08.png)
