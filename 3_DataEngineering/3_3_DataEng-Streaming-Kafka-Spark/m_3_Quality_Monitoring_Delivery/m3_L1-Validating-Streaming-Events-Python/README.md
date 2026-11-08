@@ -4,7 +4,7 @@
 **Lab:** 1 — Validating Streaming Events with Python  
 **Executor:** Li R.  
 **Date:** 08 November 2026  
-**Status:** Prepared for execution; final runtime results not yet recorded.
+**Status:** Python environment verified; Kafka validator started; five events successfully published (partition 0, offsets 0–4). Validator classification output not yet captured.
 
 ![Lab topic — Validating Streaming Events with Python](./pic/lab_title_validating_streaming_events.png)
 
@@ -39,7 +39,9 @@ m3_L1-Validating-Streaming-Events-Python/
 ├── README.txt                   # PowerShell command reference
 └── pic/
     ├── lab_title_validating_streaming_events.png
-    └── lab_source_files.png
+    ├── lab_source_files.png
+    ├── python_venv_kafka_import_verified_2026-11-08.png
+    └── validation_producer_published_offsets_0-4_2026-11-08.png
 ```
 
 ![Initial lab file listing](./pic/lab_source_files.png)
@@ -88,29 +90,40 @@ docker exec kafka-local /opt/kafka/bin/kafka-topics.sh --describe --topic valida
 
 The command above requests one partition **only when creating a new topic**. An existing topic retains its own configuration; its partition/offset values may differ.
 
-### Python dependency
+### Python environment preparation — verified 08 November 2026
 
-Check Python and the Kafka client:
+For this lab, an isolated **Python 3.12** environment is used. The dependency is defined in the supplied `requirements.txt`:
 
-```powershell
-py --version
-py -m pip show kafka-python
+```text
+kafka-python==2.2.15
 ```
 
-Install the lab dependency if missing:
+Run the following commands from the **lab directory** in PowerShell:
 
 ```powershell
-py -m pip install -r .\requirements.txt
-```
-
-For isolation, a Python 3.12 virtual environment may be used instead:
-
-```powershell
+# Create the local environment if it does not already exist.
 py -3.12 -m venv .venv
+
+# Install the required package into this environment.
 .\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+
+# Confirm that the Kafka classes are importable.
+.\.venv\Scripts\python.exe -c "from kafka import KafkaProducer, KafkaConsumer; print('Kafka Python OK')"
 ```
 
-If the virtual environment is used, replace `py` in the execution commands with `.\.venv\Scripts\python.exe`. There is no need to install PySpark for this lab.
+**Verified output:**
+
+```text
+Kafka Python OK
+```
+
+The screenshot below records the successful import using the `.venv` interpreter. A pip update notification is informational; it does not indicate a failed installation.
+
+![Python 3.12 virtual environment — KafkaProducer and KafkaConsumer import verified](./pic/python_venv_kafka_import_verified_2026-11-08.png)
+
+To use the same environment in VS Code, select `Python: Select Interpreter` → `.venv\Scripts\python.exe`. Add `.venv/` to the project's `.gitignore` so local environment files are not committed to Git.
+
+**Preparation verified:** the Kafka Python package imports successfully. The Kafka producer execution is documented below; the validator's per-event classification still requires verification.
 
 ## 4. Validation rules (`validator.py`)
 
@@ -151,7 +164,7 @@ Actual Kafka offsets depend on the broker's previous messages. The `producer.py`
 ### Terminal 1 — start the validator first
 
 ```powershell
-py .\validator.py
+.\.venv\Scripts\python.exe .\validator.py
 ```
 
 Expected startup text:
@@ -169,7 +182,7 @@ The validator is a continuous Kafka consumer. It normally keeps running while wa
 Open a **separate terminal** in the same lab directory:
 
 ```powershell
-py .\producer.py
+.\.venv\Scripts\python.exe .\producer.py
 ```
 
 The producer should report five published records and finish with:
@@ -177,6 +190,30 @@ The producer should report five published records and finish with:
 ```text
 All validation test events published successfully.
 ```
+
+### Recorded execution — 08 November 2026
+
+Two VS Code PowerShell terminals were used with the same `.venv` Python interpreter. The **left terminal** started the validator using `validator.py`, and displayed its startup banner and subscription to topic `validation-orders`. The **right terminal** executed `producer.py` and confirmed successful publication of all five events.
+
+**Observed Kafka publication results:**
+
+| Event | Kafka partition | Kafka offset | Producer result |
+|---|---:|---:|---|
+| `VAL001` | 0 | 0 | Published |
+| `VAL002` | 0 | 1 | Published |
+| `VAL003` | 0 | 2 | Published |
+| `VAL004` | 0 | 3 | Published |
+| `VAL005` | 0 | 4 | Published |
+
+The Producer finished with the observed message:
+
+```text
+All validation test events published successfully.
+```
+
+![Two-terminal execution: Kafka validator listening on the left; five records published on the right](./pic/validation_producer_published_offsets_0-4_2026-11-08.png)
+
+**Evidence boundary:** This screenshot confirms that the validator **started and was waiting for events**, and that the producer **published five Kafka messages**. It does **not** show `[VALID EVENT]` / `[INVALID EVENT]` records or the final validation counters. The expected outcome for the five supplied inputs is two valid and three invalid events, but that outcome must not be reported as observed until the validator output is captured.
 
 ### Terminal 1 — inspect validation results
 
@@ -199,17 +236,17 @@ Stop the validator with **Ctrl+C** to show the final session summary. The produc
 
 ## 7. Screenshot evidence
 
-The included images document the lab topic and initial file layout. They are **pre-execution evidence only**.
+The included images document the lab topic, initial file layout, verified local Python environment, and **actual producer publication** (five events, partition 0, offsets 0–4). The validator startup is also visible, but its per-event decisions and counters have not yet been captured.
 
 After a successful run, save additional screenshots such as:
 
 ```text
-pic/validation_producer_published.png
-pic/validation_consumer_valid_invalid.png
-pic/validation_final_summary.png
+pic/validation_producer_published_offsets_0-4_2026-11-08.png  # captured
+pic/validation_consumer_valid_invalid.png                    # pending
+pic/validation_final_summary.png                            # pending
 ```
 
-Add their relative Markdown links here only once the files are available. Replace the **Prepared for execution** status with a verified result only after reviewing the actual terminal output.
+Add their relative Markdown links here only once the files are available. The Producer is verified. Mark the full validation workflow as complete only after the validator prints classification results and a final summary.
 
 ## 8. What this lab demonstrates — and what it does not
 
@@ -238,4 +275,4 @@ The invalid events are **reported to the console**, not automatically removed fr
 
 This laboratory establishes a basic event-validation stage for a Kafka pipeline. The Python validator applies structural and business-rule checks, distinguishes valid from invalid records, and exposes the original Kafka position of each event. It forms a foundation for later work on quarantine handling, dead-letter queues, monitoring, and reliable downstream delivery.
 
-**Execution status:** Pending terminal verification.
+**Execution status (08 November 2026):** Python environment verified (`Kafka Python OK`); validator launched and waiting on `validation-orders`; Producer successfully published `VAL001`–`VAL005` to partition 0 with offsets 0–4. **Validation decisions and final counts are still pending evidence.**
