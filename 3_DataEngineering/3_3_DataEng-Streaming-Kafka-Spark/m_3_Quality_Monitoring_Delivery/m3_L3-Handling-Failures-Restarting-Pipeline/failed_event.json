@@ -1,0 +1,13 @@
+{
+  "event": {
+    "order_id": "FAIL003",
+    "customer": "Meera",
+    "amount": -999.0,
+    "status": "CREATED",
+    "simulate_failure": true
+  },
+  "topic": "failure-orders",
+  "partition": 0,
+  "offset": 2,
+  "error": "Simulated processing failure for demonstration"
+}
