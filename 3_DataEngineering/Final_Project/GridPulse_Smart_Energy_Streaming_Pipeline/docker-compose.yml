@@ -1,0 +1,19 @@
+# Reuses the existing Kafka container/network from the earlier labs.
+# Do not add or recreate a Kafka service in this Compose project.
+services:
+  spark:
+    image: apache/spark:3.5.7
+    container_name: gridpulse-spark
+    command: tail -f /dev/null
+    cpus: 2.0
+    mem_limit: 3g
+    memswap_limit: 4g
+    volumes:
+      - ./:/opt/project
+    networks:
+      - kafka-network
+
+networks:
+  kafka-network:
+    external: true
+    name: runningapachekafkalocally_default

@@ -1,0 +1,9 @@
+# GridPulse Smart Energy Streaming Pipeline
+# Host-side Python 3.12 dependencies (producer, consumer, monitoring)
+kafka-python==2.2.15
+
+# Apache Spark / PySpark 3.5.7 is provided by the Docker image:
+# apache/spark:3.5.7 (see docker-compose.yml).
+# Do not install Docker Compose through pip. It is a Docker CLI plugin
+# supplied by Docker Desktop; verify with: docker compose version
+# SQLite is included in the Python standard library (sqlite3).
